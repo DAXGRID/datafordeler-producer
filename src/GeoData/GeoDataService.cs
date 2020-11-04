@@ -92,12 +92,13 @@ namespace Datafordelen.GeoData
             var batch = new List<string>();
             var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
             var feature = new NetTopologySuite.Features.Feature();
+            var topicName = "GeoData";
 
             using (FileStream s = File.Open(fileName, FileMode.Open))
             using (var streamReader = new StreamReader(s))
             {
                 var file = Path.GetFileNameWithoutExtension(fileName).Split(".");
-                var topicname = file[1];
+                var typeName = file[1];
 
                 using (var jsonreader = new Newtonsoft.Json.JsonTextReader(streamReader))
                 {
@@ -123,12 +124,12 @@ namespace Datafordelen.GeoData
                                             var atr = feature.Attributes;
                                             if (boundingBox.Intersects(geo.EnvelopeInternal))
                                             {
-                                                jsonDoc = createGeoObject(atr,geo);
+                                                jsonDoc = createGeoObject(atr,geo,typeName);
                                                 batch.Add(jsonDoc);
                                                 if (batch.Count >= 5000)
                                                 {
-                                                    _producer.Produce(topicname, batch);
-                                                    _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicname);
+                                                    _producer.Produce(topicName, batch);
+                                                    _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicName);
                                                     batch.Clear();
                                                 }
                                             }
@@ -140,10 +141,10 @@ namespace Datafordelen.GeoData
                                             var geo = feature.Geometry;
                                             var atr = feature.Attributes;
                                             
-                                            jsonDoc = createGeoObject(atr,geo);
+                                            jsonDoc = createGeoObject(atr,geo,typeName);
                                             batch.Add(jsonDoc);
-                                            _producer.Produce(topicname, batch);
-                                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicname);
+                                            _producer.Produce(topicName, batch);
+                                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicName);
                                             batch.Clear();
                                             break;
                                         }
@@ -154,8 +155,8 @@ namespace Datafordelen.GeoData
 
                         if (batch != null)
                         {
-                            _producer.Produce(topicname, batch);
-                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicname);
+                            _producer.Produce(topicName, batch);
+                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicName);
                             batch.Clear();
                         }
                     }
@@ -163,13 +164,14 @@ namespace Datafordelen.GeoData
             }
         }
 
-        private string createGeoObject(NetTopologySuite.Features.IAttributesTable atr, NetTopologySuite.Geometries.Geometry geo)
+        private string createGeoObject(NetTopologySuite.Features.IAttributesTable atr, NetTopologySuite.Geometries.Geometry geo, string geoType)
         {
             var jsonObj = new
             {
                 gml_id = atr.GetOptionalValue("gml_id"),
                 id_lokalId = atr.GetOptionalValue("id_lokalid"),
-                geo = geo.ToString()
+                geo = geo.ToString(),
+                type = geoType
             };
             var jsonDoc = JsonConvert.SerializeObject(jsonObj);
             return jsonDoc;
