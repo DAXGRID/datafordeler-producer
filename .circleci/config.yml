@@ -82,7 +82,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "12:25:e0:96:35:bd:e6:48:3a:e9:b9:e0:5e:41:05:91"
+            - "fe:8c:48:5a:79:2e:f6:6f:00:ca:39:41:2f:34:4b:0d"
       - run:
           name: key-scan
           command: ssh-keyscan github.com >> ~/.ssh/known_hosts
@@ -97,8 +97,8 @@ jobs:
              cd ./open-ftth-chart
              git config user.email "admin@dax.dk"
              git config user.name "dax-bot"
-             sed -i "/appVersion:.*/c\appVersion: \"$IMAGE_TAG_NO_V\"" ./openftth/charts/utility-graph-service/Chart.yaml
-             sed -i "/  tag:.*/c\  tag: v$IMAGE_TAG_NO_V" ./openftth/charts/utility-graph-service/values.yaml
+             sed -i "/appVersion:.*/c\appVersion: \"$IMAGE_TAG_NO_V\"" ./openftth/charts/datafordeler-producer/Chart.yaml
+             sed -i "/  tag:.*/c\  tag: v$IMAGE_TAG_NO_V" ./openftth/charts/datafordeler-producer/values.yaml
              CHART_VERSION="$(./scripts/increment-chart-number.sh "$(grep -w '^version:' ./openftth/Chart.yaml)" bug)"
              sed -i "/^version:.*/c\version: $CHART_VERSION" ./openftth/Chart.yaml
              git add .
@@ -130,6 +130,14 @@ workflows:
           context: docker
           requires:
            - build-docker-image
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - update-helm-chart:
+          requires:
+           - docker-publish-image
           filters:
             tags:
               only: /^v.*/
