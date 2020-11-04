@@ -1,0 +1,62 @@
+---
+version: '2'
+services:
+  zookeeper:
+    image: "confluentinc/cp-zookeeper:5.2.1"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka0:
+    image: "confluentinc/cp-enterprise-kafka"
+    ports:
+      - '9092:9092'
+      - '29094:29094'
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: LISTENER_BOB://kafka0:29092,LISTENER_FRED://kafka0:9092,LISTENER_ALICE://kafka0:29094
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_BOB://kafka0:29092,LISTENER_FRED://localhost:9092,LISTENER_ALICE://outgoing-dns-here:29094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_BOB:PLAINTEXT,LISTENER_FRED:PLAINTEXT,LISTENER_ALICE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_BOB
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
+
+  Datafordeleren:
+    image: datafordeleren
+    ports:
+      - 5008:80
+    environment:
+      APPSETTINGS__INITIALADDRESSDATAURL: https://selfservice.datafordeler.dk/filedownloads/626/334
+      APPSETTINGS__INITIALADDRESSDATAZIPFILEPATH: datafordeleren/ftptrials/adress.zip
+      APPSETTINGS__INITIALADDRESSDATAUNZIPPATH: datafordeleren/ftptrials/
+      APPSETTINGS__INITIALADDRESSDATAPROCESSEDPATH: datafordeleren/newftp
+      APPSETTINGS__MINX: 538913
+      APPSETTINGS__MAXX: 568605
+      APPSETTINGS__MINY: 6182387
+      APPSETTINGS__MAXY: 6199152
+      APPSETTINGS__FTPSERVER: ftp3.datafordeler.dk
+      APPSETTINGS__ADDRESSUSERNAME:
+      APPSETTINGS__ADDRESSPASSWORD:
+      APPSETTINGS__GEOUSERNAME:
+      APPSETTINGS__GEOPASSWORD:
+      APPSETTINGS__GEOUNZIPPATH: datafordeleren/geo
+      APPSETTINGS__GEOGMLPATH: datafordeleren/geo/geogml
+      APPSETTINGS__GEOPROCESSEDPATH: datafordeleren/geo
+      APPSETTINGS__GEOFIELDLIST: vejkant
+      APPSETTINGS__KAFKABOOTSTRAPSERVER: kafka0:29092
+      APPSETTINGS__CONVERTSCRIPTFILENAME: datafordeleren/convert_script.sh
+      
+  postgres:
+    image: kartoza/postgis
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - WAL_LEVEL=logical
+    volumes:
+      - .:/postgres_open_ftth
