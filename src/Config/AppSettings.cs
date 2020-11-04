@@ -36,5 +36,9 @@ namespace Datafordelen.Config
 
         public string ConvertScriptFileName { get; set; }
 
+        public string AdressTopicName {get;set;}
+
+        public string GeoDataTopicName {get;set;}
+
     }
 }

@@ -92,7 +92,6 @@ namespace Datafordelen.GeoData
             var batch = new List<string>();
             var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
             var feature = new NetTopologySuite.Features.Feature();
-            var topicName = "GeoData";
 
             using (FileStream s = File.Open(fileName, FileMode.Open))
             using (var streamReader = new StreamReader(s))
@@ -128,8 +127,8 @@ namespace Datafordelen.GeoData
                                                 batch.Add(jsonDoc);
                                                 if (batch.Count >= 5000)
                                                 {
-                                                    _producer.Produce(topicName, batch);
-                                                    _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicName);
+                                                    _producer.Produce(_appSettings.GeoDataTopicName, batch);
+                                                    _logger.LogInformation("Wrote " + batch.Count + " objects into " + _appSettings.GeoDataTopicName);
                                                     batch.Clear();
                                                 }
                                             }
@@ -143,8 +142,8 @@ namespace Datafordelen.GeoData
                                             
                                             jsonDoc = createGeoObject(atr,geo,typeName);
                                             batch.Add(jsonDoc);
-                                            _producer.Produce(topicName, batch);
-                                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicName);
+                                            _producer.Produce(_appSettings.GeoDataTopicName, batch);
+                                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + _appSettings.GeoDataTopicName);
                                             batch.Clear();
                                             break;
                                         }
@@ -155,8 +154,8 @@ namespace Datafordelen.GeoData
 
                         if (batch != null)
                         {
-                            _producer.Produce(topicName, batch);
-                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + topicName);
+                            _producer.Produce(_appSettings.GeoDataTopicName, batch);
+                            _logger.LogInformation("Wrote " + batch.Count + " objects into " + _appSettings.GeoDataTopicName);
                             batch.Clear();
                         }
                     }

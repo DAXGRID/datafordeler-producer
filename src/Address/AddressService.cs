@@ -90,7 +90,7 @@ namespace Datafordelen.Address
 
         private async Task AdressToKafka(string filename, double minX, double minY, double maxX, double maxY)
         {
-            var topicName = "DAR";
+            
             var hussnummerBatch = new List<string>();
             var adresspunktBatch = new List<string>();
             var newHussnummerBatch = new List<string>();
@@ -153,8 +153,8 @@ namespace Datafordelen.Address
                                     jsonText.Clear();
                                     newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
 
-                                    _kafkaProducer.Produce(topicName, newHussnummerBatch);
-                                    _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + topicName);
+                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
+                                    _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
                                     adresspunktBatch.Clear();
                                     hussnummerBatch.Clear();
                                     newHussnummerBatch.Clear();
@@ -162,15 +162,15 @@ namespace Datafordelen.Address
                                 else if (listName.Equals("NavngivenVejList"))
                                 {
                                     var boundingBatch = newfilterAdressPosition(jsonText, minX, minY, maxX, maxY);
-                                    _kafkaProducer.Produce(topicName, boundingBatch);
-                                    _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + topicName);
+                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, boundingBatch);
+                                    _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.AdressTopicName);
                                     boundingBatch.Clear();
                                     jsonText.Clear();
 
                                 }
                                 else
                                 {
-                                    _kafkaProducer.Produce(topicName, jsonText);
+                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, jsonText);
                                     jsonText.Clear();
 
                                 }
@@ -198,8 +198,8 @@ namespace Datafordelen.Address
                         jsonText.Clear();
                         newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
 
-                        _kafkaProducer.Produce(topicName, newHussnummerBatch);
-                        _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + topicName);
+                        _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
+                        _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
                         adresspunktBatch.Clear();
                         hussnummerBatch.Clear();
                         newHussnummerBatch.Clear();
@@ -207,15 +207,15 @@ namespace Datafordelen.Address
                     else if (listName.Equals("NavngivenVejList"))
                     {
                         var boundingBatch = newfilterAdressPosition(jsonText, minX, minY, maxX, maxY);
-                        _kafkaProducer.Produce(topicName, boundingBatch);
-                        _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + topicName);
+                        _kafkaProducer.Produce(_appSettings.AdressTopicName, boundingBatch);
+                        _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.AdressTopicName);
                         boundingBatch.Clear();
                         jsonText.Clear();
                     }
                     else
                     {
-                        _kafkaProducer.Produce(topicName, jsonText);
-                        _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + topicName);
+                        _kafkaProducer.Produce(_appSettings.AdressTopicName, jsonText);
+                        _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + _appSettings.AdressTopicName);
                         jsonText.Clear();
                     }
                 }
