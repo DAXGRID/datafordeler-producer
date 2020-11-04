@@ -90,6 +90,7 @@ namespace Datafordelen.Address
 
         private async Task AdressToKafka(string filename, double minX, double minY, double maxX, double maxY)
         {
+            var topicName = "DAR";
             var hussnummerBatch = new List<string>();
             var adresspunktBatch = new List<string>();
             var newHussnummerBatch = new List<string>();
@@ -125,7 +126,10 @@ namespace Datafordelen.Address
                         {
                             dynamic obj = await JObject.LoadAsync(reader);
 
-                            jsonText.Add(ChangeAdressNames(obj));
+
+                            var item = addTypeField(obj,listName);
+
+                            jsonText.Add(ChangeAdressNames(item));
 
                             if (jsonText.Count >= 100000)
                             {
@@ -147,10 +151,10 @@ namespace Datafordelen.Address
                                         hussnummerBatch.Add(ob);
                                     }
                                     jsonText.Clear();
-                                    newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch,hussnummerBatch);
-                                    
-                                    _kafkaProducer.Produce(listName, newHussnummerBatch);
-                                    _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + listName);
+                                    newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
+
+                                    _kafkaProducer.Produce(topicName, newHussnummerBatch);
+                                    _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + topicName);
                                     adresspunktBatch.Clear();
                                     hussnummerBatch.Clear();
                                     newHussnummerBatch.Clear();
@@ -158,15 +162,15 @@ namespace Datafordelen.Address
                                 else if (listName.Equals("NavngivenVejList"))
                                 {
                                     var boundingBatch = newfilterAdressPosition(jsonText, minX, minY, maxX, maxY);
-                                    _kafkaProducer.Produce(listName, boundingBatch);
-                                    _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + listName);
+                                    _kafkaProducer.Produce(topicName, boundingBatch);
+                                    _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + topicName);
                                     boundingBatch.Clear();
                                     jsonText.Clear();
 
                                 }
                                 else
                                 {
-                                    _kafkaProducer.Produce(listName, jsonText);
+                                    _kafkaProducer.Produce(topicName, jsonText);
                                     jsonText.Clear();
 
                                 }
@@ -192,10 +196,10 @@ namespace Datafordelen.Address
                             hussnummerBatch.Add(ob);
                         }
                         jsonText.Clear();
-                        newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch,hussnummerBatch);
-                        
-                        _kafkaProducer.Produce(listName, newHussnummerBatch);
-                        _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + listName);
+                        newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
+
+                        _kafkaProducer.Produce(topicName, newHussnummerBatch);
+                        _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + topicName);
                         adresspunktBatch.Clear();
                         hussnummerBatch.Clear();
                         newHussnummerBatch.Clear();
@@ -203,15 +207,15 @@ namespace Datafordelen.Address
                     else if (listName.Equals("NavngivenVejList"))
                     {
                         var boundingBatch = newfilterAdressPosition(jsonText, minX, minY, maxX, maxY);
-                        _kafkaProducer.Produce(listName, boundingBatch);
-                        _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + listName);
+                        _kafkaProducer.Produce(topicName, boundingBatch);
+                        _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + topicName);
                         boundingBatch.Clear();
                         jsonText.Clear();
                     }
                     else
                     {
-                        _kafkaProducer.Produce(listName, jsonText);
-                        _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + listName);
+                        _kafkaProducer.Produce(topicName, jsonText);
+                        _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + topicName);
                         jsonText.Clear();
                     }
                 }
@@ -238,6 +242,13 @@ namespace Datafordelen.Address
 
             return newHussnummerItems;
         }
+
+        private JObject addTypeField(JObject obj, string type)
+        {
+            obj["type"] = type;
+            return obj;
+        }
+
         private List<string> newfilterAdressPosition(List<string> batch, double minX, double minY, double maxX, double maxY)
         {
 
