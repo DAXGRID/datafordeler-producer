@@ -26,7 +26,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
 
   Datafordeleren:
-    image: datafordeleren
+    image: datafordeler-producer
     ports:
       - 5008:80
     environment:
@@ -46,7 +46,7 @@ services:
       APPSETTINGS__GEOUNZIPPATH: datafordeleren/geo
       APPSETTINGS__GEOGMLPATH: datafordeleren/geo/geogml
       APPSETTINGS__GEOPROCESSEDPATH: datafordeleren/geo
-      APPSETTINGS__GEOFIELDLIST: vejkant
+      APPSETTINGS__GEOFIELDLIST: trae
       APPSETTINGS__ADRESSTOPICNAME: DAR
       APPSETTINGS__GEODATATOPICNAME: GEODATA
       APPSETTINGS__KAFKABOOTSTRAPSERVER: kafka0:29092
