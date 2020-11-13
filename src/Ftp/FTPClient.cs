@@ -47,32 +47,47 @@ namespace Datafordelen.Ftp
         public async Task GetFileFtp(string host, string userName, string password, string path)
         {
             using var client = new FtpClient(host);
-
-            client.Credentials = new NetworkCredential(userName, password);
-
-            await client.ConnectAsync();
-
-            // get a list of files and directories in the "/" folder
-            foreach (var item in await client.GetListingAsync("/"))
+            if (client != null)
             {
-                // if this is a file
-                if (item.Type == FtpFileSystemObjectType.File)
-                {
+                client.Credentials = new NetworkCredential(userName, password);
+            }
+            else
+            {
+                _logger.LogInformation("Host is not available");
+            }
 
-                    //Check if the file already exists in the local path
-                    if (await client.CompareFileAsync(path + item.FullName, "/" + item.FullName, FtpCompareOption.Size) == FtpCompareResult.Equal)
+            if (client.Credentials != null)
+            {
+                await client.ConnectAsync();
+                // get a list of files and directories in the "/" folder
+                foreach (var item in await client.GetListingAsync("/"))
+                {
+                    // if this is a file
+                    if (item.Type == FtpFileSystemObjectType.File)
                     {
-                       
-                         _logger.LogInformation("item already exists " + item.FullName);
-                    }
-                    else
-                    {
-                       
-                        _logger.LogInformation("Item needs to be added " + item.FullName);
-                        await client.DownloadFileAsync(path + item.FullName, "/" + item.FullName);
+
+                        //Check if the file already exists in the local path
+                        if (await client.CompareFileAsync(path + item.FullName, "/" + item.FullName, FtpCompareOption.Size) == FtpCompareResult.Equal)
+                        {
+
+                            _logger.LogInformation("item already exists " + item.FullName);
+                        }
+                        else
+                        {
+
+                            _logger.LogInformation("Item needs to be added " + item.FullName);
+                            await client.DownloadFileAsync(path + item.FullName, "/" + item.FullName);
+                        }
                     }
                 }
             }
+            else
+            {
+                _logger.LogInformation("Wrong credentials");
+            }
+
+
+
 
             // TODO Might not be needed
             await client.DisconnectAsync();

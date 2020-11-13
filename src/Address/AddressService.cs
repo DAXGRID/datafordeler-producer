@@ -47,7 +47,7 @@ namespace Datafordelen.Address
 
         public async Task GetLatestAddressData()
         {
-            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.UserName, _appSettings.Password, _appSettings.InitialAddressDataUnzipPath);
+            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AdressUserName, _appSettings.AdressPassword, _appSettings.InitialAddressDataUnzipPath);
             _client.UnzipFile(_appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,

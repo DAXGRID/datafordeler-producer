@@ -18,7 +18,7 @@ namespace Datafordelen
 
         public async Task StartAsync()
         {
-            //await _geoDataService.GetLatestGeoData();
+            await _geoDataService.GetLatestGeoData();
             await _addressService.GetLatestAddressData();
            
         }
