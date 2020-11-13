@@ -47,7 +47,7 @@ namespace Datafordelen.Address
 
         public async Task GetLatestAddressData()
         {
-            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AddressUserName, _appSettings.AddressPassword, _appSettings.InitialAddressDataUnzipPath);
+            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.UserName, _appSettings.Password, _appSettings.InitialAddressDataUnzipPath);
             _client.UnzipFile(_appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
@@ -77,7 +77,7 @@ namespace Datafordelen.Address
                     var file = Path.GetFileName(fileName);
                     var destFile = Path.Combine(destinationDirectory, file);
                     File.Move(fileName, destFile);
-                    _logger.LogInformation(fileName + " moved in new directory ");
+                    _logger.LogInformation(fileName + " moved in " + destFile);
                 }
                 else
                 {

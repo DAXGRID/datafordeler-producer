@@ -16,13 +16,9 @@ namespace Datafordelen.Config
 
         public string FtpServer { get; set; }
 
-        public string AddressUserName { get; set; }
+        public string UserName { get; set; }
 
-        public string AddressPassword { get; set; }
-
-        public string GeoUserName { get; set; }
-
-        public string GeoPassword { get; set; }
+        public string Password { get; set; }
 
         public string GeoUnzipPath { get; set; }
 

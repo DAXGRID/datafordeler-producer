@@ -30,7 +30,7 @@ namespace Datafordelen.GeoData
 
         public async Task GetLatestGeoData()
         {
-            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.GeoUserName, _appSettings.GeoPassword, _appSettings.GeoUnzipPath);
+            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.UserName, _appSettings.Password, _appSettings.GeoUnzipPath);
             _client.UnzipFile(_appSettings.GeoUnzipPath, _appSettings.GeoGmlPath);
             convertToGeojson(_appSettings.GeoFieldList, _appSettings.ConvertScriptFileName);
             ProcessGeoDirectory(_appSettings.GeoUnzipPath,
@@ -56,7 +56,7 @@ namespace Datafordelen.GeoData
                 var dest = Path.Combine(destinationDirectory, fileNoExtension + ".json");
                 filterGeoPosition(fileName, minX, maxX, minY, maxY);
                 File.Move(fileName, dest);
-                _logger.LogInformation(fileName + " moved in new directory ");
+                _logger.LogInformation(fileName + " moved in " + destinationDirectory);
             }
         }
 
