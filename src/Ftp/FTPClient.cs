@@ -18,7 +18,7 @@ namespace Datafordelen.Ftp
         {
             _logger = logger;
         }
-        public void GetAddressInitialLoad(String url, String filepath)
+        public void GetAddressInitialLoad(String url, String filepath, string extractPath)
         {
             var downloadLink = String.Empty;
             String[] feedwords = null;
@@ -42,9 +42,12 @@ namespace Datafordelen.Ftp
             var client = new WebClient();
             client.DownloadFile(
                 downloadLink, filepath);
+
+            UnzipFile(filepath, extractPath);
+
         }
 
-        public async Task GetFileFtp(string host, string userName, string password, string path)
+        public async Task GetFileFtp(string host, string userName, string password, string path, string extractPath)
         {
             using var client = new FtpClient(host);
             if (client != null)
@@ -77,6 +80,8 @@ namespace Datafordelen.Ftp
 
                             _logger.LogInformation("Item needs to be added " + item.FullName);
                             await client.DownloadFileAsync(path + item.FullName, "/" + item.FullName);
+
+                            UnzipFile(path + item.FullName, extractPath);
                         }
                     }
                 }
@@ -93,21 +98,10 @@ namespace Datafordelen.Ftp
             await client.DisconnectAsync();
         }
 
-        public void UnzipFile(string path, string extractPath)
+        public void UnzipFile(string fileName, string extractPath)
         {
-            var fileEntries = Directory.GetFiles(path).ToList();
-            foreach (var file in fileEntries)
-            {
-                if (file.Contains(".zip"))
-                {
-                    ZipFile.ExtractToDirectory(file, extractPath);
-                    File.Delete(file);
-                }
-                else
-                {
-                    _logger.LogInformation("File already unzipped");
-                }
-            }
+            ZipFile.ExtractToDirectory(fileName, extractPath);
+            _logger.LogInformation("File unzipped");
         }
     }
 }

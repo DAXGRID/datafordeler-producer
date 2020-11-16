@@ -34,8 +34,7 @@ namespace Datafordelen.Address
 
         public async Task GetinitialAddressData()
         {
-            _client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath);
-            _client.UnzipFile(_appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
+            _client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath,_appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
                 _appSettings.InitialAddressDataProcessedPath,
@@ -47,8 +46,7 @@ namespace Datafordelen.Address
 
         public async Task GetLatestAddressData()
         {
-            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AdressUserName, _appSettings.AdressPassword, _appSettings.InitialAddressDataUnzipPath);
-            _client.UnzipFile(_appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
+            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AdressUserName, _appSettings.AdressPassword, _appSettings.InitialAddressDataUnzipPath,_appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
                 _appSettings.InitialAddressDataProcessedPath,
@@ -71,7 +69,7 @@ namespace Datafordelen.Address
             var fileEntries = Directory.GetFiles(sourceDirectory).ToList();
             foreach (string fileName in fileEntries)
             {
-                if (!fileName.Contains("Metadata"))
+                if (!fileName.Contains("Metadata") && !fileName.Contains(".zip"))
                 {
                     await AdressToKafka(fileName, minX, minY, maxX, maxY);
                     var file = Path.GetFileName(fileName);
@@ -79,11 +77,16 @@ namespace Datafordelen.Address
                     File.Move(fileName, destFile);
                     _logger.LogInformation(fileName + " moved in " + destFile);
                 }
-                else
+                else if(fileName.Contains("Metada"))
                 {
                     var file = Path.GetFileName(fileName);
                     var destFile = Path.Combine(destinationDirectory, file);
                     File.Move(fileName, destFile);
+                    _logger.LogInformation(fileName + " moved in " + destFile);
+                }
+                else
+                {
+                    _logger.LogInformation("Zip file still in folder");
                 }
             }
         }
