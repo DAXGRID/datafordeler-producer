@@ -6,7 +6,6 @@ using System.IO;
 using FluentFTP;
 using System.Threading.Tasks;
 using System.IO.Compression;
-using System.Linq;
 using Microsoft.Extensions.Logging;
 
 namespace Datafordelen.Ftp
@@ -38,6 +37,7 @@ namespace Datafordelen.Ftp
             // The link for downloading the necessary it is at the specified position
             downloadLink = feedwords[5];
             _logger.LogInformation(downloadLink);
+            Directory.CreateDirectory(extractPath);
 
             var client = new WebClient();
             client.DownloadFile(
@@ -90,15 +90,11 @@ namespace Datafordelen.Ftp
             {
                 _logger.LogInformation("Wrong credentials");
             }
-
-
-
-
             // TODO Might not be needed
             await client.DisconnectAsync();
         }
 
-        public void UnzipFile(string fileName, string extractPath)
+        private void UnzipFile(string fileName, string extractPath)
         {
             ZipFile.ExtractToDirectory(fileName, extractPath);
             _logger.LogInformation("File unzipped");
