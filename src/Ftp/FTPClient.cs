@@ -49,18 +49,24 @@ namespace Datafordelen.Ftp
 
         public async Task GetFileFtp(string host, string userName, string password, string path, string extractPath)
         {
-            using var client = new FtpClient(host);
-            if (client != null)
-            {
-                client.Credentials = new NetworkCredential(userName, password);
-            }
-            else
-            {
-                _logger.LogInformation("Host is not available");
-            }
+            FtpClient client = new FtpClient(host);
 
-            if (client.Credentials != null)
+            try
             {
+                client = new FtpClient(host);
+                /*
+                catch (Exception e)
+                {
+                    if (e is FtpException || e is System.ArgumentNullException)
+                    {
+                        _logger.LogInformation("Host not available or wrong host");
+
+                    }
+                }
+                */
+
+
+                client.Credentials = new NetworkCredential(userName, password);
                 await client.ConnectAsync();
                 // get a list of files and directories in the "/" folder
                 foreach (var item in await client.GetListingAsync("/"))
@@ -86,9 +92,18 @@ namespace Datafordelen.Ftp
                     }
                 }
             }
-            else
+            catch (Exception e)
             {
-                _logger.LogInformation("Wrong credentials");
+                if (e is FtpAuthenticationException)
+                {
+                    _logger.LogError("Wrong credentials");
+                    Environment.Exit(1);
+                }
+                else if (e is FtpException || e is System.ArgumentNullException)
+                {
+                    _logger.LogError("Host not available or wrong host");
+                    Environment.Exit(1);
+                }
             }
             // TODO Might not be needed
             await client.DisconnectAsync();
