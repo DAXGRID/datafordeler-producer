@@ -3,6 +3,7 @@ using Datafordelen.Kafka;
 using Datafordelen.Ftp;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace Datafordelen.BBR
 {
@@ -19,6 +20,11 @@ namespace Datafordelen.BBR
             _logger = logger;
             _client = ftpClient;
             _producer = kakfkaProducer;
+        }
+
+        public async Task  GetBBRData()
+        {
+            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AdressUserName, _appSettings.AdressPassword, _appSettings.InitialAddressDataUnzipPath,_appSettings.InitialAddressDataUnzipPath);
         }
     }
 }
