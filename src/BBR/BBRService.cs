@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
 
 namespace Datafordelen.BBR
 {
@@ -104,10 +106,9 @@ namespace Datafordelen.BBR
                         if (reader.TokenType == JsonToken.StartObject)
                         {
                             dynamic obj = await JObject.LoadAsync(reader);
-
                             var item = addTypeField(obj, listName);
-
-                            jsonText.Add(item);
+                            var objText = JsonConvert.SerializeObject(item, Formatting.Indented);
+                            jsonText.Add(objText);
 
                             if (jsonText.Count >= 100000)
                             {
@@ -157,7 +158,46 @@ namespace Datafordelen.BBR
 
         private List<string> FilterPosition(List<string> batch, double minX, double minY, double maxX, double maxY)
         {
-            return null;
+            var filteredBatch = new List<string>();
+            var geometryFactory = new GeometryFactory();
+            Geometry point;
+            var rdr = new WKTReader(geometryFactory);
+            var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
+
+            foreach (var document in batch)
+            {
+                try
+                {
+                    var o = JObject.Parse(document);
+                    foreach (var jp in o.Properties().ToList())
+                    {
+                        if (jp.Name == "byg404Koordinat")
+                        {
+                            point = rdr.Read(jp.Value.ToString());
+                            if (boundingBox.Intersects(point.EnvelopeInternal))
+                            {
+                                filteredBatch.Add(document);
+                            }
+                        }
+                        else if (jp.Name == "tek109Koordinat")
+                        {
+                            point = rdr.Read(jp.Value.ToString());
+                            if (boundingBox.Intersects(point.EnvelopeInternal))
+                            {
+                                filteredBatch.Add(document);
+                            }
+                        }
+                    }
+                }
+                catch (NetTopologySuite.IO.ParseException e)
+                {
+                    _logger.LogError("Error writing data: {0}.", e.GetType().Name);
+                    _logger.LogInformation(document);
+                    break;
+                }
+            }
+
+            return filteredBatch;
         }
     }
 }
