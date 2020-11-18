@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using Datafordelen.Address;
 using Datafordelen.GeoData;
+using Datafordelen.BBR;
 using Datafordelen.Config;
 using Datafordelen.Ftp;
 using Datafordelen.Kafka;
@@ -39,6 +40,7 @@ namespace Datafordelen.Internal
             serviceCollection.AddSingleton<Startup, Startup>();
             serviceCollection.AddSingleton<IGeoDataService, GeoDataService>();
             serviceCollection.AddSingleton<IAddressService, AddressService>();
+            serviceCollection.AddSingleton<IBBRService,BBRService>();
             serviceCollection.AddSingleton<IFTPClient, FTPClient>();
             serviceCollection.AddSingleton<IKafkaProducer, KafkaProducer>();
             serviceCollection.AddLogging(configure =>
