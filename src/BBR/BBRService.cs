@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Datafordelen.BBR
 {
@@ -74,7 +76,47 @@ namespace Datafordelen.BBR
 
         private async Task BBRToKafka(string filename, double minX, double minY, double maxX, double maxY)
         {
+            using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+            using (var sr = new StreamReader(fs))
+            using (var reader = new JsonTextReader(sr))
+            {
+                while (await reader.ReadAsync())
+                {
+                    var listName = "BBRSagList";
+                    if (reader.TokenType != JsonToken.StartArray)
+                    {
+                        if (reader.TokenType == JsonToken.PropertyName)
+                        {
+                            listName = reader?.Value.ToString();
+                            _logger.LogInformation(listName);
+                        }
 
+                        await reader.ReadAsync();
+                    }
+
+                    var jsonText = new List<string>();
+
+                    while (await reader.ReadAsync())
+                    {
+                        if (reader.TokenType == JsonToken.EndArray)
+                            break;
+
+                        if(reader.TokenType == JsonToken.StartObject)
+                        {
+                            dynamic obj = await JObject.LoadAsync(reader);
+
+                            var item = addTypeField(obj,listName);
+                        }    
+
+                    }
+                }
+            }
+        }
+
+        private JObject addTypeField(JObject obj, string type)
+        {
+            obj["type"] = type;
+            return obj;
         }
     }
 }
