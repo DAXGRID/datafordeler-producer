@@ -101,12 +101,48 @@ namespace Datafordelen.BBR
                         if (reader.TokenType == JsonToken.EndArray)
                             break;
 
-                        if(reader.TokenType == JsonToken.StartObject)
+                        if (reader.TokenType == JsonToken.StartObject)
                         {
                             dynamic obj = await JObject.LoadAsync(reader);
 
-                            var item = addTypeField(obj,listName);
-                        }    
+                            var item = addTypeField(obj, listName);
+
+                            jsonText.Add(item);
+
+                            if (jsonText.Count >= 100000)
+                            {
+                                if (listName.Equals("BygningList") || listName.Equals("TekniskAnlægList"))
+                                {
+                                    var boundingBatch = FilterPosition(jsonText, minX, minY, maxX, maxY);
+                                    _producer.Produce(_appSettings.BBRTopicName, boundingBatch);
+                                    _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.BBRTopicName);
+                                    boundingBatch.Clear();
+                                    jsonText.Clear();
+                                }
+                                else
+                                {
+                                    _producer.Produce(_appSettings.BBRTopicName, jsonText);
+                                    jsonText.Clear();
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+                    if (listName.Equals("BygningList") || listName.Equals("TekniskAnlægList"))
+                    {
+                        var boundingBatch = FilterPosition(jsonText, minX, minY, maxX, maxY);
+                        _producer.Produce(_appSettings.BBRTopicName, boundingBatch);
+                        _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.BBRTopicName);
+                        boundingBatch.Clear();
+                        jsonText.Clear();
+                    }
+                    else
+                    {
+                        _producer.Produce(_appSettings.BBRTopicName, jsonText);
+                        jsonText.Clear();
 
                     }
                 }
@@ -117,6 +153,11 @@ namespace Datafordelen.BBR
         {
             obj["type"] = type;
             return obj;
+        }
+
+        private List<string> FilterPosition(List<string> batch, double minX, double minY, double maxX, double maxY)
+        {
+            return null;
         }
     }
 }

@@ -110,7 +110,7 @@ namespace Datafordelen.Address
                         if (reader.TokenType == JsonToken.PropertyName)
                         {
                             listName = reader?.Value.ToString();
-                            Console.WriteLine(listName);
+                               _logger.LogInformation(listName);
                         }
 
                         await reader.ReadAsync();
