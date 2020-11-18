@@ -24,7 +24,7 @@ namespace Datafordelen.BBR
 
         public async Task  GetBBRData()
         {
-            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AdressUserName, _appSettings.AdressPassword, _appSettings.InitialAddressDataUnzipPath,_appSettings.InitialAddressDataUnzipPath);
+            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.BBRUserName, _appSettings.BBRPassword, _appSettings.BBRUnzipPath,_appSettings.BBRUnzipPath);
         }
     }
 }

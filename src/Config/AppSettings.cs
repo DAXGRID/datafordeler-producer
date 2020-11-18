@@ -40,5 +40,16 @@ namespace Datafordelen.Config
 
         public string GeoDataTopicName {get;set;}
 
+        public string BBRTopicName {get;set;}
+
+        public string BBRUserName {get;set;}
+
+        public string BBRPassword {get;set;}
+
+        public string BBRUnzipPath{get;set;}
+
+        public string BBRProcessedPath {get;set;}
+        
+
     }
 }
