@@ -41,10 +41,9 @@ namespace Datafordelen.BBR
         private async Task ProcessBBRFiless(string sourceDirectory, string destinationDirectory, double minX, double minY, double maxX, double maxY)
         {
             var destinfo = new DirectoryInfo(destinationDirectory);
-            if (destinfo.Exists == false)
-            {
-                Directory.CreateDirectory(destinationDirectory);
-            }
+
+            Directory.CreateDirectory(destinationDirectory);
+
             var sourceinfo = new DirectoryInfo(sourceDirectory);
             var dirs = sourceinfo.GetDirectories();
 
@@ -75,7 +74,7 @@ namespace Datafordelen.BBR
 
         private async Task BBRToKafka(string filename, double minX, double minY, double maxX, double maxY)
         {
-            
+
         }
     }
 }

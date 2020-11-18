@@ -34,7 +34,7 @@ namespace Datafordelen.Address
 
         public async Task GetinitialAddressData()
         {
-            _client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath,_appSettings.InitialAddressDataUnzipPath);
+            _client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath, _appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
                 _appSettings.InitialAddressDataProcessedPath,
@@ -46,7 +46,7 @@ namespace Datafordelen.Address
 
         public async Task GetLatestAddressData()
         {
-            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AdressUserName, _appSettings.AdressPassword, _appSettings.InitialAddressDataUnzipPath,_appSettings.InitialAddressDataUnzipPath);
+            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.AdressUserName, _appSettings.AdressPassword, _appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
                 _appSettings.InitialAddressDataProcessedPath,
@@ -59,10 +59,9 @@ namespace Datafordelen.Address
         private async Task ProcessLatestAdresses(string sourceDirectory, string destinationDirectory, double minX, double minY, double maxX, double maxY)
         {
             var destinfo = new DirectoryInfo(destinationDirectory);
-            if (destinfo.Exists == false)
-            {
-                Directory.CreateDirectory(destinationDirectory);
-            }
+
+            Directory.CreateDirectory(destinationDirectory);
+
             var sourceinfo = new DirectoryInfo(sourceDirectory);
             var dirs = sourceinfo.GetDirectories();
 
@@ -77,7 +76,7 @@ namespace Datafordelen.Address
                     File.Move(fileName, destFile);
                     _logger.LogInformation(fileName + " moved in " + destFile);
                 }
-                else if(fileName.Contains("Metada"))
+                else if (fileName.Contains("Metada"))
                 {
                     var file = Path.GetFileName(fileName);
                     var destFile = Path.Combine(destinationDirectory, file);
@@ -93,7 +92,7 @@ namespace Datafordelen.Address
 
         private async Task AdressToKafka(string filename, double minX, double minY, double maxX, double maxY)
         {
-            
+
             var hussnummerBatch = new List<string>();
             var adresspunktBatch = new List<string>();
             var newHussnummerBatch = new List<string>();
@@ -130,7 +129,7 @@ namespace Datafordelen.Address
                             dynamic obj = await JObject.LoadAsync(reader);
 
 
-                            var item = addTypeField(obj,listName);
+                            var item = addTypeField(obj, listName);
 
                             jsonText.Add(ChangeAdressNames(item));
 
