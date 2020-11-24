@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
+using System;
 
 namespace Datafordelen.BBR
 {
@@ -106,9 +107,10 @@ namespace Datafordelen.BBR
                         if (reader.TokenType == JsonToken.StartObject)
                         {
                             dynamic obj = await JObject.LoadAsync(reader);
+
                             var item = addTypeField(obj, listName);
-                            var objText = JsonConvert.SerializeObject(item, Formatting.Indented);
-                            jsonText.Add(objText);
+                            //var objText = JsonConvert.SerializeObject(item, Formatting.Indented);
+                            jsonText.Add(TranslateTimeFields(item));
 
                             if (jsonText.Count >= 100000)
                             {
@@ -123,6 +125,7 @@ namespace Datafordelen.BBR
                                 else
                                 {
                                     _producer.Produce(_appSettings.BBRTopicName, jsonText);
+                                    _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + _appSettings.BBRTopicName);
                                     jsonText.Clear();
 
                                 }
@@ -143,6 +146,7 @@ namespace Datafordelen.BBR
                     else
                     {
                         _producer.Produce(_appSettings.BBRTopicName, jsonText);
+                        _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + _appSettings.BBRTopicName);
                         jsonText.Clear();
 
                     }
@@ -154,6 +158,32 @@ namespace Datafordelen.BBR
         {
             obj["type"] = type;
             return obj;
+        }
+
+
+        public string ChangeDateFormat(string dateString)
+        {
+            DateTime result;
+            if (dateString == null)
+            {
+                //Do nothing
+                dateString = "null";
+                return dateString;
+            }
+            else
+            {
+                try
+                {
+                    result = DateTime.Parse(dateString, null, System.Globalization.DateTimeStyles.RoundtripKind);
+                    return result.ToString("yyyy-MM-dd HH:mm:ss");
+                }
+                catch (ArgumentNullException)
+                {
+
+                    _logger.LogError("{0} is not in the correct format.", dateString);
+                }
+            }
+            return String.Empty;
         }
 
         private List<string> FilterPosition(List<string> batch, double minX, double minY, double maxX, double maxY)
@@ -198,6 +228,42 @@ namespace Datafordelen.BBR
             }
 
             return filteredBatch;
+        }
+
+        private string TranslateTimeFields(JObject jo)
+        {
+            foreach (var jp in jo.Properties().ToList())
+            {
+                switch (jp.Name)
+                {
+                    case "registreringFra":
+                        var dateValue = (string)jp.Value;
+                        jp.Value = ChangeDateFormat(dateValue);
+                        jp.Replace(new JProperty("registrationFrom", jp.Value));
+                        break;
+
+                    case "registreringTil":
+                        dateValue = (string)jp.Value;
+                        jp.Value = ChangeDateFormat(dateValue);
+                        jp.Replace(new JProperty("registrationTo", jp.Value));
+                        break;
+
+                    case "virkningFra":
+                        dateValue = (string)jp.Value;
+                        jp.Value = ChangeDateFormat(dateValue);
+                        jp.Replace(new JProperty("effectFrom", jp.Value));
+                        break;
+
+                    case "virkningTil":
+                        dateValue = (string)jp.Value;
+                        jp.Value = ChangeDateFormat(dateValue);
+                        jp.Replace(new JProperty("effectTo", jp.Value));
+                        break;
+                }
+            }
+
+            var obj = JsonConvert.SerializeObject(jo, Formatting.Indented);
+            return obj;
         }
     }
 }
