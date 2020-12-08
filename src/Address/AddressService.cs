@@ -110,7 +110,7 @@ namespace Datafordelen.Address
                         if (reader.TokenType == JsonToken.PropertyName)
                         {
                             listName = reader?.Value.ToString();
-                               _logger.LogInformation(listName);
+                            _logger.LogInformation(listName);
                         }
 
                         await reader.ReadAsync();
@@ -133,7 +133,7 @@ namespace Datafordelen.Address
 
                             jsonText.Add(ChangeAdressNames(item));
 
-                            if (jsonText.Count >= 10000)
+                            if (jsonText.Count >= 100000)
                             {
                                 if (listName.Equals("AdressepunktList"))
                                 {
@@ -143,10 +143,10 @@ namespace Datafordelen.Address
                                         adresspunktBatch.Add(b);
                                     }
                                     boundingBatch.Clear();
-                               
+
 
                                     jsonText.Clear();
-                                 
+
 
                                 }
                                 else if (listName.Equals("HusnummerList"))
@@ -158,12 +158,16 @@ namespace Datafordelen.Address
                                     }
                                     _logger.LogInformation("The number of objects " + hussnummerBatch.Count.ToString());
                                     jsonText.Clear();
-                                    newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
+                                    var noDuplicateshussnummer = checkLatestDataDuplicates(hussnummerBatch);
+                                    var noDuplicateaddrespunkt = checkLatestDataDuplicates(adresspunktBatch);
+                                    newHussnummerBatch = AddPositionToHouseObjects(noDuplicateaddrespunkt, noDuplicateshussnummer);
 
                                     _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
                                     _logger.LogInformation("Wrote newHusnummer " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
                                     adresspunktBatch.Clear();
                                     hussnummerBatch.Clear();
+                                    noDuplicateaddrespunkt.Clear();
+                                    noDuplicateshussnummer.Clear();
                                     newHussnummerBatch.Clear();
                                 }
                                 else if (listName.Equals("NavngivenVejList"))
@@ -192,25 +196,30 @@ namespace Datafordelen.Address
                         {
                             adresspunktBatch.Add(b);
                         }
-                  
+
 
                         boundingBatch.Clear();
                         jsonText.Clear();
                     }
                     else if (listName.Equals("HusnummerList"))
                     {
-                   
+
                         foreach (var ob in jsonText)
                         {
                             hussnummerBatch.Add(ob);
                         }
-                      
+
                         jsonText.Clear();
-                        newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
+                        var noDuplicateshussnummer = checkLatestDataDuplicates(hussnummerBatch);
+                        var noDuplicateaddrespunkt = checkLatestDataDuplicates(adresspunktBatch);
+                        newHussnummerBatch = AddPositionToHouseObjects(noDuplicateaddrespunkt, noDuplicateshussnummer);
+
 
                         _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
                         _logger.LogInformation("Wrote newHusnummer  " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
                         adresspunktBatch.Clear();
+                        noDuplicateaddrespunkt.Clear();
+                        noDuplicateshussnummer.Clear();
                         hussnummerBatch.Clear();
                         newHussnummerBatch.Clear();
                     }
@@ -236,25 +245,133 @@ namespace Datafordelen.Address
         {
             var newHussnummerItems = new List<JObject>();
 
+            var addrespunktLookup = addresspunktItems.Select(x => new KeyValuePair<string, JObject>(x["id_lokalId"].ToString(), x)).ToDictionary(x => x.Key, x => x.Value);
+
 
             foreach (var house in HussnummerItems)
             {
-                foreach (var adress in addresspunktItems)
+                var houseAdressPoint = (string)house["addressPoint"];
+
+                if (addrespunktLookup.TryGetValue(houseAdressPoint, out var address))
                 {
-                    //var objHouse = JObject.Parse(house);
-                    //var objAdress = JObject.Parse(adress);
-                    /*
-                    if (objHouse["addressPoint"].Equals(objAdress["id_lokalId"]))
-                    {
-                        objHouse["position"] = objAdress["position"];
-                        var newHouse = JsonConvert.SerializeObject(objHouse, Formatting.Indented);
-                        newHussnummerItems.Add(newHouse);
-                    }
-                    */
+                    house["position"] = address["position"];
+                    //it may not even be necessary to add the documents
+                    newHussnummerItems.Add(house);
                 }
             }
 
             return newHussnummerItems;
+        }
+
+        private List<JObject> checkLatestDataDuplicates(List<JObject> batch)
+        {
+            var dictionary = new Dictionary<string, JObject>();
+            var list = new List<JObject>();
+
+            foreach (var currentItem in batch)
+            {
+                JObject parsedItem;
+                if (dictionary.TryGetValue(currentItem["id_lokalId"].ToString(), out parsedItem))
+                {
+                    //Set the time variables 
+                    var registrationFrom = DateTime.MinValue;
+                    var itemRegistrationFrom = DateTime.MinValue;
+                    var registrationTo = DateTime.MinValue;
+                    var itemRegistrationTo = DateTime.MinValue;
+                    var effectFrom = DateTime.MinValue;
+                    var itemEffectFrom = DateTime.MinValue;
+                    var effectTo = DateTime.MinValue;
+                    var itemEffectTo = DateTime.MinValue;
+                    //Check if it contains the null string 
+                    bool CheckIfNull(JObject jObject, string key)
+                    {
+                        return jObject[key]! is null && jObject[key].ToString() != "null";
+                    }
+
+                    if (CheckIfNull(parsedItem, "registrationFrom"))
+                    {
+                        registrationFrom = DateTime.Parse(parsedItem["registrationFrom"].ToString());
+                    }
+
+                    if (CheckIfNull(currentItem, "registrationFrom"))
+                    {
+                        itemRegistrationFrom = DateTime.Parse(currentItem["registrationFrom"].ToString());
+                    }
+
+                    if (CheckIfNull(parsedItem, "registrationTo"))
+                    {
+                        registrationTo = DateTime.Parse(parsedItem["registrationTo"].ToString());
+                    }
+
+                    if (CheckIfNull(currentItem, "registrationTo"))
+                    {
+                        itemRegistrationTo = DateTime.Parse(currentItem["registrationTo"].ToString());
+                    }
+
+                    if (CheckIfNull(parsedItem, "effectFrom"))
+                    {
+                        effectFrom = DateTime.Parse(parsedItem["effectFrom"].ToString());
+                    }
+
+                    if (CheckIfNull(currentItem, "effectFrom"))
+                    {
+                        itemEffectFrom = DateTime.Parse(currentItem["effectFrom"].ToString());
+                    }
+
+                    if (CheckIfNull(parsedItem, "effectTo"))
+                    {
+                        effectTo = DateTime.Parse(parsedItem["effectTo"].ToString());
+                    }
+
+                    if (CheckIfNull(currentItem, "effectTo"))
+                    {
+                        itemEffectTo = DateTime.Parse(currentItem["effectTo"].ToString());
+                    }
+
+                    var idLokalIdItem = dictionary[currentItem["id_lokalId"]?.ToString()];
+                    //Compare the date time values and return only the latest
+                    if (registrationFrom < itemRegistrationFrom)
+                    {
+                        idLokalIdItem = currentItem;
+
+                    }
+                    else if (registrationFrom == itemRegistrationFrom)
+                    {
+                        if (registrationTo < itemRegistrationTo)
+                        {
+                            idLokalIdItem = currentItem;
+                        }
+                        else if (registrationTo == itemRegistrationTo)
+                        {
+                            if (effectFrom < itemEffectFrom)
+                            {
+                                idLokalIdItem = currentItem;
+
+                            }
+                            else if (effectFrom == itemEffectFrom)
+                            {
+                                if (effectTo < itemEffectTo)
+                                {
+                                    idLokalIdItem = currentItem;
+
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    dictionary[currentItem["id_lokalId"].ToString()] = currentItem;
+                }
+            }
+
+            //Add in the list only the objects with the latest date
+            foreach (var d in dictionary)
+            {
+                list.Add(d.Value);
+            }
+
+            return list;
         }
 
         private JObject addTypeField(JObject obj, string type)
