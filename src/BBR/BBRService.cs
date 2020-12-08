@@ -97,7 +97,7 @@ namespace Datafordelen.BBR
                         await reader.ReadAsync();
                     }
 
-                    var jsonText = new List<string>();
+                    var jsonText = new List<JObject>();
 
                     while (await reader.ReadAsync())
                     {
@@ -186,9 +186,9 @@ namespace Datafordelen.BBR
             return String.Empty;
         }
 
-        private List<string> FilterPosition(List<string> batch, double minX, double minY, double maxX, double maxY)
+        private List<JObject> FilterPosition(List<JObject> batch, double minX, double minY, double maxX, double maxY)
         {
-            var filteredBatch = new List<string>();
+            var filteredBatch = new List<JObject>();
             var geometryFactory = new GeometryFactory();
             Geometry point;
             var rdr = new WKTReader(geometryFactory);
@@ -198,8 +198,7 @@ namespace Datafordelen.BBR
             {
                 try
                 {
-                    var o = JObject.Parse(document);
-                    foreach (var jp in o.Properties().ToList())
+                    foreach (var jp in document.Properties().ToList())
                     {
                         if (jp.Name == "byg404Koordinat")
                         {
@@ -222,7 +221,7 @@ namespace Datafordelen.BBR
                 catch (NetTopologySuite.IO.ParseException e)
                 {
                     _logger.LogError("Error writing data: {0}.", e.GetType().Name);
-                    _logger.LogInformation(document);
+                    _logger.LogInformation(document.ToString());
                     break;
                 }
             }
@@ -230,7 +229,7 @@ namespace Datafordelen.BBR
             return filteredBatch;
         }
 
-        private string TranslateTimeFields(JObject jo)
+        private JObject TranslateTimeFields(JObject jo)
         {
             foreach (var jp in jo.Properties().ToList())
             {
@@ -262,8 +261,7 @@ namespace Datafordelen.BBR
                 }
             }
 
-            var obj = JsonConvert.SerializeObject(jo, Formatting.Indented);
-            return obj;
+            return jo;
         }
     }
 }

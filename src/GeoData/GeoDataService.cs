@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Datafordelen.Config;
 using Datafordelen.Kafka;
 using Datafordelen.Ftp;
@@ -87,8 +88,8 @@ namespace Datafordelen.GeoData
 
         private void filterGeoPosition(String fileName, double minX, double maxX, double minY, double maxY)
         {
-            var jsonDoc = "";
-            var batch = new List<string>();
+            JObject jsonDoc ;
+            var batch = new List<JObject>();
             var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
             var feature = new NetTopologySuite.Features.Feature();
 
@@ -162,7 +163,7 @@ namespace Datafordelen.GeoData
             }
         }
 
-        private string createGeoObject(NetTopologySuite.Features.IAttributesTable atr, NetTopologySuite.Geometries.Geometry geo, string geoType)
+        private JObject createGeoObject(NetTopologySuite.Features.IAttributesTable atr, NetTopologySuite.Geometries.Geometry geo, string geoType)
         {
             var jsonObj = new
             {
@@ -171,8 +172,8 @@ namespace Datafordelen.GeoData
                 geo = geo.ToString(),
                 type = geoType
             };
-            var jsonDoc = JsonConvert.SerializeObject(jsonObj);
-            return jsonDoc;
+            var geoObject = JObject.Parse(jsonObj.ToString());
+            return geoObject;
         }
     }
 }

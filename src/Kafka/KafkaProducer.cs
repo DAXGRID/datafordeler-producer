@@ -2,6 +2,7 @@ using Confluent.Kafka;
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using Datafordelen.Config;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
@@ -19,9 +20,9 @@ namespace Datafordelen.Kafka
             _logger = logger;
         }
 
-        public void Produce(string topicname, List<string> batch)
+        public void Produce(string topicname, List<JObject> batch)
         {
-            var config = new ProducerConfig { BootstrapServers = _appSettings.KafkaBootstrapServer, LingerMs = 5, BatchNumMessages = 100000, QueueBufferingMaxMessages = 100000 };         
+            var config = new ProducerConfig { BootstrapServers = _appSettings.KafkaBootstrapServer, LingerMs = 5, BatchNumMessages = 100000, QueueBufferingMaxMessages = 100000 };
 
             using (var p = new ProducerBuilder<string, string>(config).Build())
             {
@@ -29,20 +30,20 @@ namespace Datafordelen.Kafka
                 foreach (var document in batch)
                 {
                     var id = String.Empty;
-                    var o = JObject.Parse(document);
 
-                    if (o["gml_id"] != null)
+                    if (document["gml_id"] != null)
                     {
-                        id = (string)o["gml_id"];
+                        id = (string)document["gml_id"];
                     }
                     else
                     {
-                        id = (string)o["id_lokalId"];
+                        id = (string)document["id_lokalId"];
                     }
 
                     try
                     {
-                        p.Produce(topicname, new Message<string, string> { Value = document, Key = id });
+                        var textDoc = JsonConvert.SerializeObject(document, Formatting.Indented);
+                        p.Produce(topicname, new Message<string, string> { Value = textDoc, Key = id });
                     }
                     catch (ProduceException<Null, string> e)
                     {

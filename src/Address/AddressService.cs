@@ -93,9 +93,9 @@ namespace Datafordelen.Address
         private async Task AdressToKafka(string filename, double minX, double minY, double maxX, double maxY)
         {
 
-            var hussnummerBatch = new List<string>();
-            var adresspunktBatch = new List<string>();
-            var newHussnummerBatch = new List<string>();
+            var hussnummerBatch = new List<JObject>();
+            var adresspunktBatch = new List<JObject>();
+            var newHussnummerBatch = new List<JObject>();
             using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
             using (var sr = new StreamReader(fs))
             using (var reader = new JsonTextReader(sr))
@@ -116,7 +116,7 @@ namespace Datafordelen.Address
                         await reader.ReadAsync();
                     }
 
-                    var jsonText = new List<string>();
+                    var jsonText = new List<JObject>();
 
                     // Now process each store individually
                     while (await reader.ReadAsync())
@@ -133,7 +133,7 @@ namespace Datafordelen.Address
 
                             jsonText.Add(ChangeAdressNames(item));
 
-                            if (jsonText.Count >= 100000)
+                            if (jsonText.Count >= 10000)
                             {
                                 if (listName.Equals("AdressepunktList"))
                                 {
@@ -142,21 +142,26 @@ namespace Datafordelen.Address
                                     {
                                         adresspunktBatch.Add(b);
                                     }
+                                    boundingBatch.Clear();
+                               
 
                                     jsonText.Clear();
+                                 
+
                                 }
                                 else if (listName.Equals("HusnummerList"))
                                 {
-
+                                    Console.WriteLine("This is the number of object in json text inside " + jsonText.Count());
                                     foreach (var ob in jsonText)
                                     {
                                         hussnummerBatch.Add(ob);
                                     }
+                                    _logger.LogInformation("The number of objects " + hussnummerBatch.Count.ToString());
                                     jsonText.Clear();
                                     newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
 
                                     _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
-                                    _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
+                                    _logger.LogInformation("Wrote newHusnummer " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
                                     adresspunktBatch.Clear();
                                     hussnummerBatch.Clear();
                                     newHussnummerBatch.Clear();
@@ -187,21 +192,24 @@ namespace Datafordelen.Address
                         {
                             adresspunktBatch.Add(b);
                         }
+                  
 
                         boundingBatch.Clear();
                         jsonText.Clear();
                     }
                     else if (listName.Equals("HusnummerList"))
                     {
+                   
                         foreach (var ob in jsonText)
                         {
                             hussnummerBatch.Add(ob);
                         }
+                      
                         jsonText.Clear();
                         newHussnummerBatch = AddPositionToHouseObjects(adresspunktBatch, hussnummerBatch);
 
                         _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
-                        _logger.LogInformation("Wrote " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
+                        _logger.LogInformation("Wrote newHusnummer  " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
                         adresspunktBatch.Clear();
                         hussnummerBatch.Clear();
                         newHussnummerBatch.Clear();
@@ -224,21 +232,25 @@ namespace Datafordelen.Address
             }
         }
 
-        private List<string> AddPositionToHouseObjects(List<string> addresspunktItems, List<string> HussnummerItems)
+        private List<JObject> AddPositionToHouseObjects(List<JObject> addresspunktItems, List<JObject> HussnummerItems)
         {
-            var newHussnummerItems = new List<string>();
+            var newHussnummerItems = new List<JObject>();
+
+
             foreach (var house in HussnummerItems)
             {
                 foreach (var adress in addresspunktItems)
                 {
-                    var objHouse = JObject.Parse(house);
-                    var objAdress = JObject.Parse(adress);
+                    //var objHouse = JObject.Parse(house);
+                    //var objAdress = JObject.Parse(adress);
+                    /*
                     if (objHouse["addressPoint"].Equals(objAdress["id_lokalId"]))
                     {
                         objHouse["position"] = objAdress["position"];
                         var newHouse = JsonConvert.SerializeObject(objHouse, Formatting.Indented);
                         newHussnummerItems.Add(newHouse);
                     }
+                    */
                 }
             }
 
@@ -251,10 +263,10 @@ namespace Datafordelen.Address
             return obj;
         }
 
-        private List<string> newfilterAdressPosition(List<string> batch, double minX, double minY, double maxX, double maxY)
+        private List<JObject> newfilterAdressPosition(List<JObject> batch, double minX, double minY, double maxX, double maxY)
         {
 
-            var filteredBatch = new List<string>();
+            var filteredBatch = new List<JObject>();
             var geometryFactory = new GeometryFactory();
             Geometry line;
             Geometry point;
@@ -266,8 +278,7 @@ namespace Datafordelen.Address
             var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
             foreach (var document in batch)
             {
-                var o = JObject.Parse(document);
-                foreach (var jp in o.Properties().ToList())
+                foreach (var jp in document.Properties().ToList())
                 {
                     if (jp.Name == "position")
                     {
@@ -321,7 +332,7 @@ namespace Datafordelen.Address
                         catch (NetTopologySuite.IO.ParseException e)
                         {
                             _logger.LogError("Error writing data: {0}.", e.GetType().Name);
-                            _logger.LogInformation(document);
+                            _logger.LogInformation(document.ToString());
                             break;
                         }
                     }
@@ -331,7 +342,7 @@ namespace Datafordelen.Address
             return filteredBatch;
         }
 
-        private string ChangeAdressNames(JObject jo)
+        private JObject ChangeAdressNames(JObject jo)
         {
             foreach (var jp in jo.Properties().ToList())
             {
@@ -506,8 +517,7 @@ namespace Datafordelen.Address
                 }
             }
 
-            var obj = JsonConvert.SerializeObject(jo, Formatting.Indented);
-            return obj;
+            return jo;
         }
 
         public string ChangeDateFormat(string dateString)

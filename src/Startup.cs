@@ -2,7 +2,11 @@ using System.Threading.Tasks;
 using Datafordelen.GeoData;
 using Datafordelen.Address;
 using Datafordelen.BBR;
-
+using System;
+using System.Threading;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using System.Linq;
 
 namespace Datafordelen
 {
@@ -21,12 +25,11 @@ namespace Datafordelen
 
         public async Task StartAsync()
         {
-            await _bbrService.GetBBRData();
-            //await _addressService.GetLatestAddressData();
-            //await _addressService.GetinitialAddressData();
+            //await _bbrService.GetBBRData();
+            await _addressService.GetLatestAddressData();
+            await _addressService.GetinitialAddressData();
             //await _geoDataService.GetLatestGeoData();
-           
-           
+
         }
     }
 }
