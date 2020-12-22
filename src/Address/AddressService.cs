@@ -83,10 +83,12 @@ namespace Datafordelen.Address
                     File.Move(fileName, destFile);
                     _logger.LogInformation(fileName + " moved in " + destFile);
                 }
+                /*
                 else
                 {
                     _logger.LogInformation("Zip file still in folder");
                 }
+                */
             }
         }
 
@@ -151,38 +153,52 @@ namespace Datafordelen.Address
                                 }
                                 else if (listName.Equals("HusnummerList"))
                                 {
-                                    Console.WriteLine("This is the number of object in json text inside " + jsonText.Count());
+
                                     foreach (var ob in jsonText)
                                     {
                                         hussnummerBatch.Add(ob);
                                     }
-                                    _logger.LogInformation("The number of objects " + hussnummerBatch.Count.ToString());
                                     jsonText.Clear();
-                                    var noDuplicateshussnummer = checkLatestDataDuplicates(hussnummerBatch);
-                                    var noDuplicateaddrespunkt = checkLatestDataDuplicates(adresspunktBatch);
-                                    newHussnummerBatch = AddPositionToHouseObjects(noDuplicateaddrespunkt, noDuplicateshussnummer);
 
-                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
-                                    _logger.LogInformation("Wrote newHusnummer " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
-                                    adresspunktBatch.Clear();
-                                    hussnummerBatch.Clear();
-                                    noDuplicateaddrespunkt.Clear();
-                                    noDuplicateshussnummer.Clear();
-                                    newHussnummerBatch.Clear();
+                                    var noDuplicatesAdressPunkt = checkLatestDataDuplicates(adresspunktBatch);
+                                    var noDuplicatesHussnumer = checkLatestDataDuplicates(hussnummerBatch);
+
+
+                                    if (noDuplicatesAdressPunkt.Count > 0 && noDuplicatesHussnumer.Count > 0)
+                                    {
+                                        newHussnummerBatch = AddPositionToHouseObjects(noDuplicatesAdressPunkt, noDuplicatesHussnumer);
+
+
+                                        _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
+
+                                        _logger.LogInformation(@$"Wrote  merged objects  {newHussnummerBatch.Count}  objects into  {_appSettings.AdressTopicName}");
+                                        noDuplicatesHussnumer.Clear();
+                                        hussnummerBatch.Clear();
+                                        newHussnummerBatch.Clear();
+
+                                    }
+
                                 }
                                 else if (listName.Equals("NavngivenVejList"))
                                 {
                                     var boundingBatch = newfilterAdressPosition(jsonText, minX, minY, maxX, maxY);
-                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, boundingBatch);
-                                    _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.AdressTopicName);
+                                    var noDuplicatesNavngivenVej = checkLatestDataDuplicates(boundingBatch);
+
+                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
+                                    _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
+
+                                    noDuplicatesNavngivenVej.Clear();
                                     boundingBatch.Clear();
                                     jsonText.Clear();
 
                                 }
                                 else
                                 {
-                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, jsonText);
+                                    var noDuplicates = checkLatestDataDuplicates(jsonText);
+                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicates);
+                                    _logger.LogInformation(@$"Wrote  {jsonText.Count}   objects into  {_appSettings.AdressTopicName}");
                                     jsonText.Clear();
+
 
                                 }
                             }
@@ -210,31 +226,43 @@ namespace Datafordelen.Address
                         }
 
                         jsonText.Clear();
-                        var noDuplicateshussnummer = checkLatestDataDuplicates(hussnummerBatch);
-                        var noDuplicateaddrespunkt = checkLatestDataDuplicates(adresspunktBatch);
-                        newHussnummerBatch = AddPositionToHouseObjects(noDuplicateaddrespunkt, noDuplicateshussnummer);
+                        var noDuplicatesAdressPunkt = checkLatestDataDuplicates(adresspunktBatch);
+                        var noDuplicatesHussnumer = checkLatestDataDuplicates(hussnummerBatch);
+
+                        if (noDuplicatesAdressPunkt.Count > 0 && noDuplicatesHussnumer.Count > 0)
+                        {
+                            newHussnummerBatch = AddPositionToHouseObjects(noDuplicatesAdressPunkt, noDuplicatesHussnumer);
 
 
-                        _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
-                        _logger.LogInformation("Wrote newHusnummer  " + newHussnummerBatch.Count + " objects into " + _appSettings.AdressTopicName);
-                        adresspunktBatch.Clear();
-                        noDuplicateaddrespunkt.Clear();
-                        noDuplicateshussnummer.Clear();
-                        hussnummerBatch.Clear();
-                        newHussnummerBatch.Clear();
+                            _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
+
+                            _logger.LogInformation(@$"Wrote  merged objects  {newHussnummerBatch.Count}  objects into  {_appSettings.AdressTopicName}");
+                            noDuplicatesHussnumer.Clear();
+                            hussnummerBatch.Clear();
+                            newHussnummerBatch.Clear();
+
+                        }
+
+
                     }
                     else if (listName.Equals("NavngivenVejList"))
                     {
                         var boundingBatch = newfilterAdressPosition(jsonText, minX, minY, maxX, maxY);
-                        _kafkaProducer.Produce(_appSettings.AdressTopicName, boundingBatch);
-                        _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.AdressTopicName);
+                        var noDuplicatesNavngivenVej = checkLatestDataDuplicates(boundingBatch);
+
+                        _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
+                        _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
+
                         boundingBatch.Clear();
+                        noDuplicatesNavngivenVej.Clear();
                         jsonText.Clear();
+
                     }
                     else
                     {
-                        _kafkaProducer.Produce(_appSettings.AdressTopicName, jsonText);
-                        _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + _appSettings.AdressTopicName);
+                        var noDuplicates = checkLatestDataDuplicates(jsonText);
+                        _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicates);
+                        _logger.LogInformation(@$"Wrote  {jsonText.Count}   objects into  {_appSettings.AdressTopicName}");
                         jsonText.Clear();
                     }
                 }
@@ -244,6 +272,7 @@ namespace Datafordelen.Address
         private List<JObject> AddPositionToHouseObjects(List<JObject> addresspunktItems, List<JObject> HussnummerItems)
         {
             var newHussnummerItems = new List<JObject>();
+
 
             var addrespunktLookup = addresspunktItems.Select(x => new KeyValuePair<string, JObject>(x["id_lokalId"].ToString(), x)).ToDictionary(x => x.Key, x => x.Value);
 
@@ -261,6 +290,92 @@ namespace Datafordelen.Address
             }
 
             return newHussnummerItems;
+        }
+
+
+        private JObject addTypeField(JObject obj, string type)
+        {
+            obj["type"] = type;
+            return obj;
+        }
+
+        private List<JObject> newfilterAdressPosition(List<JObject> batch, double minX, double minY, double maxX, double maxY)
+        {
+
+            var filteredBatch = new List<JObject>();
+            var geometryFactory = new GeometryFactory();
+            Geometry line;
+            Geometry point;
+            Geometry polygon;
+            Geometry multipoint;
+            string name;
+            string value = "";
+            var rdr = new WKTReader(geometryFactory);
+            var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
+            foreach (var document in batch)
+            {
+                foreach (var jp in document.Properties().ToList())
+                {
+                    if (jp.Name == "position")
+                    {
+                        point = rdr.Read(jp.Value.ToString());
+                        if (boundingBox.Intersects(point.EnvelopeInternal))
+                        {
+                            filteredBatch.Add(document);
+                        }
+                    }
+                    else if (jp.Name == "roadRegistrationRoadLine")
+                    {
+                        try
+                        {
+                            if (jp.Value != null)
+                            {
+                                line = rdr.Read(jp.Value.ToString());
+                                if (boundingBox.Intersects(line.EnvelopeInternal))
+                                {
+                                    filteredBatch.Add(document);
+                                }
+                            }
+                            else
+                            {
+                                if (jp.Name == "roadRegistrationRoadArea")
+                                {
+                                    name = jp.Name;
+                                    value = (string)jp.Value;
+                                    polygon = rdr.Read(jp.Value.ToString());
+
+                                    if (boundingBox.Intersects(polygon.EnvelopeInternal))
+                                    {
+                                        filteredBatch.Add(document);
+                                    }
+                                }
+
+                                else if (jp.Name == "roadRegistrationRoadConnectionPoints")
+                                {
+                                    multipoint = rdr.Read(jp.Value.ToString());
+
+                                    if (boundingBox.Intersects(multipoint.EnvelopeInternal))
+                                    {
+                                        filteredBatch.Add(document);
+                                    }
+                                }
+                            }
+                        }
+
+                        /* Gets parse exception when they are values in both roadRegistrationRoadConnectionPoints and roadRegistrationArea,
+                           also when they are null values in those fields
+                        */
+                        catch (NetTopologySuite.IO.ParseException e)
+                        {
+                            _logger.LogError("Error writing data: {0}.", e.GetType().Name);
+                            _logger.LogInformation(document.ToString());
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return filteredBatch;
         }
 
         private List<JObject> checkLatestDataDuplicates(List<JObject> batch)
@@ -372,91 +487,6 @@ namespace Datafordelen.Address
             }
 
             return list;
-        }
-
-        private JObject addTypeField(JObject obj, string type)
-        {
-            obj["type"] = type;
-            return obj;
-        }
-
-        private List<JObject> newfilterAdressPosition(List<JObject> batch, double minX, double minY, double maxX, double maxY)
-        {
-
-            var filteredBatch = new List<JObject>();
-            var geometryFactory = new GeometryFactory();
-            Geometry line;
-            Geometry point;
-            Geometry polygon;
-            Geometry multipoint;
-            string name;
-            string value = "";
-            var rdr = new WKTReader(geometryFactory);
-            var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
-            foreach (var document in batch)
-            {
-                foreach (var jp in document.Properties().ToList())
-                {
-                    if (jp.Name == "position")
-                    {
-                        point = rdr.Read(jp.Value.ToString());
-                        if (boundingBox.Intersects(point.EnvelopeInternal))
-                        {
-                            filteredBatch.Add(document);
-                        }
-                    }
-                    else if (jp.Name == "roadRegistrationRoadLine")
-                    {
-                        try
-                        {
-                            if (jp.Value != null)
-                            {
-                                line = rdr.Read(jp.Value.ToString());
-                                if (boundingBox.Intersects(line.EnvelopeInternal))
-                                {
-                                    filteredBatch.Add(document);
-                                }
-                            }
-                            else
-                            {
-                                if (jp.Name == "roadRegistrationRoadArea")
-                                {
-                                    name = jp.Name;
-                                    value = (string)jp.Value;
-                                    polygon = rdr.Read(jp.Value.ToString());
-
-                                    if (boundingBox.Intersects(polygon.EnvelopeInternal))
-                                    {
-                                        filteredBatch.Add(document);
-                                    }
-                                }
-
-                                else if (jp.Name == "roadRegistrationRoadConnectionPoints")
-                                {
-                                    multipoint = rdr.Read(jp.Value.ToString());
-
-                                    if (boundingBox.Intersects(multipoint.EnvelopeInternal))
-                                    {
-                                        filteredBatch.Add(document);
-                                    }
-                                }
-                            }
-                        }
-
-                        /* Gets parse exception when they are values in both roadRegistrationRoadConnectionPoints and roadRegistrationArea,
-                           also when they are null values in those fields
-                        */
-                        catch (NetTopologySuite.IO.ParseException e)
-                        {
-                            _logger.LogError("Error writing data: {0}.", e.GetType().Name);
-                            _logger.LogInformation(document.ToString());
-                            break;
-                        }
-                    }
-                }
-            }
-
-            return filteredBatch;
         }
 
         private JObject ChangeAdressNames(JObject jo)

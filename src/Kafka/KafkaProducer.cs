@@ -7,6 +7,7 @@ using Datafordelen.Config;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 
+
 namespace Datafordelen.Kafka
 {
     public class KafkaProducer : IKafkaProducer
@@ -56,5 +57,6 @@ namespace Datafordelen.Kafka
                 p.Flush(TimeSpan.FromSeconds(10));
             }
         }
+
     }
 }
