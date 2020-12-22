@@ -98,6 +98,8 @@ namespace Datafordelen.Address
             var hussnummerBatch = new List<JObject>();
             var adresspunktBatch = new List<JObject>();
             var newHussnummerBatch = new List<JObject>();
+            var HussnumerNew = new List<JObject>();
+            var HussnumerNavngivej = new List<JObject>();
             using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
             using (var sr = new StreamReader(fs))
             using (var reader = new JsonTextReader(sr))
@@ -168,11 +170,15 @@ namespace Datafordelen.Address
                                     if (noDuplicatesAdressPunkt.Count > 0 && noDuplicatesHussnumer.Count > 0)
                                     {
                                         newHussnummerBatch = AddPositionToHouseObjects(noDuplicatesAdressPunkt, noDuplicatesHussnumer);
+                                        foreach (var doc in newHussnummerBatch)
+                                        {
+                                            HussnumerNew.Add(doc);
+                                        }
 
 
-                                        _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
+                                        //_kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
 
-                                        _logger.LogInformation(@$"Wrote  merged objects  {newHussnummerBatch.Count}  objects into  {_appSettings.AdressTopicName}");
+                                        //_logger.LogInformation(@$"Wrote  merged objects  {newHussnummerBatch.Count}  objects into  {_appSettings.AdressTopicName}");
                                         noDuplicatesHussnumer.Clear();
                                         hussnummerBatch.Clear();
                                         newHussnummerBatch.Clear();
@@ -187,6 +193,10 @@ namespace Datafordelen.Address
 
                                     _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
                                     _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
+
+                                    HussnumerNavngivej = AddRoadNameToHouseObjects(noDuplicatesNavngivenVej, HussnumerNew);
+                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
+                                    _logger.LogInformation(@$"Wrote newHussnumer  {HussnumerNavngivej.Count}   objects into  {_appSettings.AdressTopicName}");
 
                                     noDuplicatesNavngivenVej.Clear();
                                     boundingBatch.Clear();
@@ -233,11 +243,15 @@ namespace Datafordelen.Address
                         if (noDuplicatesAdressPunkt.Count > 0 && noDuplicatesHussnumer.Count > 0)
                         {
                             newHussnummerBatch = AddPositionToHouseObjects(noDuplicatesAdressPunkt, noDuplicatesHussnumer);
+                            foreach (var doc in newHussnummerBatch)
+                            {
+                                HussnumerNew.Add(doc);
+                            }
 
 
-                            _kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
+                            //_kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
 
-                            _logger.LogInformation(@$"Wrote  merged objects  {newHussnummerBatch.Count}  objects into  {_appSettings.AdressTopicName}");
+                            //_logger.LogInformation(@$"Wrote  merged objects  {newHussnummerBatch.Count}  objects into  {_appSettings.AdressTopicName}");
                             noDuplicatesHussnumer.Clear();
                             hussnummerBatch.Clear();
                             newHussnummerBatch.Clear();
@@ -253,6 +267,11 @@ namespace Datafordelen.Address
 
                         _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
                         _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
+
+
+                        HussnumerNavngivej = AddRoadNameToHouseObjects(noDuplicatesNavngivenVej, HussnumerNew);
+                        _kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
+                        _logger.LogInformation(@$"Wrote newHussnumer  {HussnumerNavngivej.Count}   objects into  {_appSettings.AdressTopicName}");
 
                         boundingBatch.Clear();
                         noDuplicatesNavngivenVej.Clear();
@@ -285,6 +304,33 @@ namespace Datafordelen.Address
                 if (addrespunktLookup.TryGetValue(houseAdressPoint, out var address))
                 {
                     house["position"] = address["position"];
+                    //it may not even be necessary to add the documents
+                    newHussnummerItems.Add(house);
+                }
+            }
+
+            return newHussnummerItems;
+        }
+
+        private List<JObject> AddRoadNameToHouseObjects(List<JObject> roadNameItems, List<JObject> HussnummerItems)
+        {
+            var newHussnummerItems = new List<JObject>();
+
+            _logger.LogInformation("The number of husnnumer items " + HussnummerItems.Count());
+
+
+            var roadNameLookup = roadNameItems.Select(x => new KeyValuePair<string, JObject>(x["id_lokalId"].ToString(), x)).ToDictionary(x => x.Key, x => x.Value);
+
+
+            foreach (var house in HussnummerItems)
+            {
+                _logger.LogInformation("THis is the house object " + house);
+                var houseRoadName = (string)house["namedRoad"];
+
+                if (roadNameLookup.TryGetValue(houseRoadName, out var road))
+                {
+                    _logger.LogInformation("This is the road object" + road);
+                    house["roadName"] = road["roadName"];
                     //it may not even be necessary to add the documents
                     newHussnummerItems.Add(house);
                 }
