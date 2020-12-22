@@ -144,6 +144,7 @@ namespace Datafordelen.Address
                                     {
                                         adresspunktBatch.Add(b);
                                     }
+                                    _kafkaProducer.Produce(_appSettings.AdressTopicName, checkLatestDataDuplicates(boundingBatch));
                                     boundingBatch.Clear();
 
 
@@ -212,7 +213,7 @@ namespace Datafordelen.Address
                         {
                             adresspunktBatch.Add(b);
                         }
-
+                        _kafkaProducer.Produce(_appSettings.AdressTopicName, checkLatestDataDuplicates(boundingBatch));
 
                         boundingBatch.Clear();
                         jsonText.Clear();

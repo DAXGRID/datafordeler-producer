@@ -69,7 +69,7 @@ namespace Datafordelen.Ftp
                         if (item.FullName.Contains("BBR_Aktuelt") == true)
                         {
                             items.Add(item.FullName);
-                            //await DownloadFileFtp(client,path + items[0],"/" + items[0],extractPath);
+                            await DownloadFileFtp(client,path + items[0],"/" + items[0],extractPath);
                         }
 
                         else
