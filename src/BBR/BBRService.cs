@@ -114,44 +114,35 @@ namespace Datafordelen.BBR
 
                             if (jsonText.Count >= 100000)
                             {
-                                if (listName.Equals("BygningList") || listName.Equals("TekniskAnlægList"))
-                                {
-                                    var boundingBatch = FilterPosition(jsonText, minX, minY, maxX, maxY);
-                                    _producer.Produce(_appSettings.BBRTopicName, boundingBatch);
-                                    _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.BBRTopicName);
-                                    boundingBatch.Clear();
-                                    jsonText.Clear();
-                                }
-                                else
-                                {
-                                    _producer.Produce(_appSettings.BBRTopicName, jsonText);
-                                    _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + _appSettings.BBRTopicName);
-                                    jsonText.Clear();
-
-                                }
-
+                                processBBRDataToKakfa(listName,jsonText,minX,minY,maxX,maxY);
                             }
 
                         }
 
                     }
-                    if (listName.Equals("BygningList") || listName.Equals("TekniskAnlægList"))
-                    {
-                        var boundingBatch = FilterPosition(jsonText, minX, minY, maxX, maxY);
-                        _producer.Produce(_appSettings.BBRTopicName, boundingBatch);
-                        _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.BBRTopicName);
-                        boundingBatch.Clear();
-                        jsonText.Clear();
-                    }
-                    else
-                    {
-                        _producer.Produce(_appSettings.BBRTopicName, jsonText);
-                        _logger.LogInformation("Wrote " + jsonText.Count + " objects into " + _appSettings.BBRTopicName);
-                        jsonText.Clear();
-
-                    }
+                    processBBRDataToKakfa(listName,jsonText,minX,minY,maxX,maxY);
                 }
             }
+        }
+
+        private void processBBRDataToKakfa(string listName, List<JObject> documents, double minX, double minY, double maxX, double maxY)
+        {
+            if (listName.Equals("BygningList") || listName.Equals("TekniskAnlægList"))
+            {
+                var boundingBatch = FilterPosition(documents, minX, minY, maxX, maxY);
+                _producer.Produce(_appSettings.BBRTopicName, boundingBatch);
+                _logger.LogInformation("Wrote " + boundingBatch.Count + " objects into " + _appSettings.BBRTopicName);
+                boundingBatch.Clear();
+                documents.Clear();
+            }
+            else
+            {
+                _producer.Produce(_appSettings.BBRTopicName, documents);
+                _logger.LogInformation("Wrote " + documents.Count + " objects into " + _appSettings.BBRTopicName);
+                documents.Clear();
+
+            }
+
         }
 
         private JObject addTypeField(JObject obj, string type)

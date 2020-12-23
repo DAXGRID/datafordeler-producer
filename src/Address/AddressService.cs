@@ -189,6 +189,8 @@ namespace Datafordelen.Address
                     {
                         HussnumerNew.Add(doc);
                     }
+                    _logger.LogInformation("Objects in hussnummerNew" + HussnumerNew.Count );
+
 
 
                     //_kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
@@ -208,7 +210,8 @@ namespace Datafordelen.Address
 
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
                 _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
-
+                
+                _logger.LogInformation("Objects in navn hussnummerNew" + HussnumerNew.Count );
                 HussnumerNavngivej = AddRoadNameToHouseObjects(noDuplicatesNavngivenVej, HussnumerNew);
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
                 _logger.LogInformation(@$"Wrote newHussnumer  {HussnumerNavngivej.Count}   objects into  {_appSettings.AdressTopicName}");
