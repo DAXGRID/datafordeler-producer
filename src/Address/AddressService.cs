@@ -23,6 +23,9 @@ namespace Datafordelen.Address
         private IKafkaProducer _kafkaProducer;
 
         private readonly ILogger<AddressService> _logger;
+        private List<JObject> adresspunktBatch = new List<JObject>();
+        private List<JObject> HussnumerNew = new List<JObject>();
+        private List<JObject> NavngivenVejNew = new List<JObject>();
 
         public AddressService(IOptions<AppSettings> appSettings, ILogger<AddressService> logger, IFTPClient ftpClient, IKafkaProducer kafkaProducer)
         {
@@ -134,13 +137,13 @@ namespace Datafordelen.Address
 
                             if (jsonText.Count >= 100000)
                             {
-                             
-                             ProcessDataForKafka(listName,jsonText,minX,minY,maxX,maxY);
+                                _logger.LogInformation("This is the listname" + listName);
+                                ProcessDataForKafka(listName, jsonText, minX, minY, maxX, maxY);
                             }
                         }
                     }
 
-                     ProcessDataForKafka(listName,jsonText,minX,minY,maxX,maxY);
+                    ProcessDataForKafka(listName, jsonText, minX, minY, maxX, maxY);
                 }
             }
         }
@@ -149,9 +152,7 @@ namespace Datafordelen.Address
         {
 
             var hussnummerBatch = new List<JObject>();
-            var adresspunktBatch = new List<JObject>();
             var newHussnummerBatch = new List<JObject>();
-            var HussnumerNew = new List<JObject>();
             var HussnumerNavngivej = new List<JObject>();
 
             if (listName.Equals("AdressepunktList"))
@@ -162,6 +163,7 @@ namespace Datafordelen.Address
                     adresspunktBatch.Add(b);
                 }
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, checkLatestDataDuplicates(boundingBatch));
+                _logger.LogInformation(@$"Wrote Adressepunkt {checkLatestDataDuplicates(boundingBatch).Count}");
                 boundingBatch.Clear();
 
 
@@ -171,6 +173,7 @@ namespace Datafordelen.Address
             }
             else if (listName.Equals("HusnummerList"))
             {
+                _logger.LogInformation("It got here");
 
                 foreach (var ob in documents)
                 {
@@ -180,16 +183,20 @@ namespace Datafordelen.Address
 
                 var noDuplicatesAdressPunkt = checkLatestDataDuplicates(adresspunktBatch);
                 var noDuplicatesHussnumer = checkLatestDataDuplicates(hussnummerBatch);
+                _logger.LogInformation("Objects in noDuplicatesHussnumer" + noDuplicatesHussnumer.Count);
+                _logger.LogInformation("Objects in noDuplicatesAdressPunkt" + noDuplicatesAdressPunkt.Count);
 
 
                 if (noDuplicatesAdressPunkt.Count > 0 && noDuplicatesHussnumer.Count > 0)
                 {
                     newHussnummerBatch = AddPositionToHouseObjects(noDuplicatesAdressPunkt, noDuplicatesHussnumer);
+                    _logger.LogInformation("Objects in newHussnummerBatch" + newHussnummerBatch.Count);
+
                     foreach (var doc in newHussnummerBatch)
                     {
                         HussnumerNew.Add(doc);
                     }
-                    _logger.LogInformation("Objects in hussnummerNew" + HussnumerNew.Count );
+                    _logger.LogInformation("Objects in hussnummerNew" + HussnumerNew.Count);
 
 
 
@@ -210,16 +217,28 @@ namespace Datafordelen.Address
 
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
                 _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
-                
-                _logger.LogInformation("Objects in navn hussnummerNew" + HussnumerNew.Count );
-                HussnumerNavngivej = AddRoadNameToHouseObjects(noDuplicatesNavngivenVej, HussnumerNew);
-                _kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
-                _logger.LogInformation(@$"Wrote newHussnumer  {HussnumerNavngivej.Count}   objects into  {_appSettings.AdressTopicName}");
+                foreach (var doc in noDuplicatesNavngivenVej)
+                {
+                    NavngivenVejNew.Add(doc);
+                }
+
 
                 noDuplicatesNavngivenVej.Clear();
                 boundingBatch.Clear();
                 documents.Clear();
 
+
+            }
+            else if (listName.Equals("NavngivenVejKommunedelList"))
+            {
+                 var noDuplicates = checkLatestDataDuplicates(documents);
+                _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicates);
+                _logger.LogInformation(@$"Wrote  {documents.Count}   objects into  {_appSettings.AdressTopicName}");
+                documents.Clear();
+                //Trick used to add the roadname into the house objects as NavngivenVejList is after HussnumerList we need all the data from both lists in order to make the dictionary lookup 
+                HussnumerNavngivej = AddRoadNameToHouseObjects(NavngivenVejNew, HussnumerNew);
+                _kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
+                _logger.LogInformation(@$"Wrote newHussnumer  {HussnumerNavngivej.Count}   objects into  {_appSettings.AdressTopicName}");
             }
             else
             {
@@ -261,18 +280,15 @@ namespace Datafordelen.Address
 
             _logger.LogInformation("The number of husnnumer items " + HussnummerItems.Count());
 
-
             var roadNameLookup = roadNameItems.Select(x => new KeyValuePair<string, JObject>(x["id_lokalId"].ToString(), x)).ToDictionary(x => x.Key, x => x.Value);
-
 
             foreach (var house in HussnummerItems)
             {
-                _logger.LogInformation("THis is the house object " + house);
+
                 var houseRoadName = (string)house["namedRoad"];
 
                 if (roadNameLookup.TryGetValue(houseRoadName, out var road))
                 {
-                    _logger.LogInformation("This is the road object" + road);
                     house["roadName"] = road["roadName"];
                     //it may not even be necessary to add the documents
                     newHussnummerItems.Add(house);
