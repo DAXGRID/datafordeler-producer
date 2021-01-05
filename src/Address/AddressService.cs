@@ -37,7 +37,8 @@ namespace Datafordelen.Address
 
         public async Task GetinitialAddressData()
         {
-            _client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath, _appSettings.InitialAddressDataUnzipPath);
+            //_client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath, _appSettings.InitialAddressDataUnzipPath);
+            await _client.GetAddressInitialFtp(_appSettings.FtpServer,_appSettings.InitialAddressDataUnzipPath,_appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
                 _appSettings.InitialAddressDataProcessedPath,
@@ -183,22 +184,16 @@ namespace Datafordelen.Address
 
                 var noDuplicatesAdressPunkt = checkLatestDataDuplicates(adresspunktBatch);
                 var noDuplicatesHussnumer = checkLatestDataDuplicates(hussnummerBatch);
-                _logger.LogInformation("Objects in noDuplicatesHussnumer" + noDuplicatesHussnumer.Count);
-                _logger.LogInformation("Objects in noDuplicatesAdressPunkt" + noDuplicatesAdressPunkt.Count);
 
 
                 if (noDuplicatesAdressPunkt.Count > 0 && noDuplicatesHussnumer.Count > 0)
                 {
                     newHussnummerBatch = AddPositionToHouseObjects(noDuplicatesAdressPunkt, noDuplicatesHussnumer);
-                    _logger.LogInformation("Objects in newHussnummerBatch" + newHussnummerBatch.Count);
 
                     foreach (var doc in newHussnummerBatch)
                     {
                         HussnumerNew.Add(doc);
                     }
-                    _logger.LogInformation("Objects in hussnummerNew" + HussnumerNew.Count);
-
-
 
                     //_kafkaProducer.Produce(_appSettings.AdressTopicName, newHussnummerBatch);
 
@@ -212,15 +207,26 @@ namespace Datafordelen.Address
             }
             else if (listName.Equals("NavngivenVejList"))
             {
+                foreach(var doc in documents)
+                {
+                    if (doc["id_lokalId"].ToString() == "027d1b03-02e6-4dd4-8cdb-240cd4f2a3e3")
+                    {
+                    _logger.LogInformation(doc.ToString());
+                    }
+                }
                 var boundingBatch = newfilterAdressPosition(documents, minX, minY, maxX, maxY);
                 var noDuplicatesNavngivenVej = checkLatestDataDuplicates(boundingBatch);
 
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
                 _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
-                foreach (var doc in noDuplicatesNavngivenVej)
-                {
-                    NavngivenVejNew.Add(doc);
-                }
+                // foreach (var doc in noDuplicatesNavngivenVej)
+                // {
+                //     if (doc["id_lokalId"].ToString() == "027d1b03-02e6-4dd4-8cdb-240cd4f2a3e3")
+                //     {
+                //         _logger.LogInformation(doc.ToString());
+                //     }
+                //     NavngivenVejNew.Add(doc);
+                // }
 
 
                 noDuplicatesNavngivenVej.Clear();
@@ -231,13 +237,16 @@ namespace Datafordelen.Address
             }
             else if (listName.Equals("NavngivenVejKommunedelList"))
             {
-                 var noDuplicates = checkLatestDataDuplicates(documents);
+                var noDuplicates = checkLatestDataDuplicates(documents);
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicates);
                 _logger.LogInformation(@$"Wrote  {documents.Count}   objects into  {_appSettings.AdressTopicName}");
                 documents.Clear();
+
                 //Trick used to add the roadname into the house objects as NavngivenVejList is after HussnumerList we need all the data from both lists in order to make the dictionary lookup 
-                HussnumerNavngivej = AddRoadNameToHouseObjects(NavngivenVejNew, HussnumerNew);
-                _kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
+                //HussnumerNavngivej = AddRoadNameToHouseObjects(NavngivenVejNew, HussnumerNew);
+                NavngivenVejNew.Clear();
+                HussnumerNew.Clear();
+                //_kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
                 _logger.LogInformation(@$"Wrote newHussnumer  {HussnumerNavngivej.Count}   objects into  {_appSettings.AdressTopicName}");
             }
             else
