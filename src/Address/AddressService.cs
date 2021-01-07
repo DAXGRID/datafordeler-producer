@@ -208,12 +208,6 @@ namespace Datafordelen.Address
                 var boundingBatch = newfilterAdressPosition(documents, minX, minY, maxX, maxY);
                 var noDuplicatesNavngivenVej = checkLatestDataDuplicates(boundingBatch);
 
-                foreach (var d in noDuplicatesNavngivenVej)
-                {
-                    _logger.LogInformation(@$"This is the navngivenj id {d["id_lokalId"]}, registrationFrom {d["registrationFrom"]}, registrationTo {d["registrationTo"]}, effectFrom {d["effectFrom"]}, effectTo {d["effectTo"]} ");
-
-                }
-
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
                 _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
                 foreach (var doc in noDuplicatesNavngivenVej)
@@ -282,10 +276,6 @@ namespace Datafordelen.Address
             roadNameItems = checkLatestDataDuplicates(roadNameItems);
 
 
-            _logger.LogInformation("The number of husnnumer items " + HussnummerItems.Count());
-            _logger.LogInformation("The number of roadname items " + roadNameItems.Count());
-
-
 
             var roadNameLookup = roadNameItems.Select(x => new KeyValuePair<string, JObject>(x["id_lokalId"].ToString(), x)).ToDictionary(x => x.Key, x => x.Value);
 
@@ -293,16 +283,20 @@ namespace Datafordelen.Address
             {
 
                 var houseRoadName = (string)house["namedRoad"];
-
-                if (roadNameLookup.TryGetValue(houseRoadName, out var road))
+                try
                 {
-                    house["roadName"] = road["roadName"];
-                    //it may not even be necessary to add the documents
-                    newHussnummerItems.Add(house);
+                    if (roadNameLookup.TryGetValue(houseRoadName, out var road))
+                    {
+                        house["roadName"] = road["roadName"];
+                        //it may not even be necessary to add the documents
+                        newHussnummerItems.Add(house);
+                    }
+                }
+                catch (ArgumentNullException)
+                {
+                    _logger.LogError("No road object " + house);
                 }
             }
-
-            _logger.LogInformation("The number of new hussnumer items " + newHussnummerItems.Count());
 
             return newHussnummerItems;
         }
