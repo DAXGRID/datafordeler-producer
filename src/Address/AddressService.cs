@@ -295,6 +295,8 @@ namespace Datafordelen.Address
                 catch (ArgumentNullException)
                 {
                     _logger.LogError("No road object " + house);
+                    //Add the objects even if they don't have the road field
+                    newHussnummerItems.Add(house);
                 }
             }
 
