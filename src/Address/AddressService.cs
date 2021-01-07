@@ -38,7 +38,7 @@ namespace Datafordelen.Address
         public async Task GetinitialAddressData()
         {
             //_client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath, _appSettings.InitialAddressDataUnzipPath);
-            await _client.GetAddressInitialFtp(_appSettings.FtpServer,_appSettings.InitialAddressDataUnzipPath,_appSettings.InitialAddressDataUnzipPath);
+            await _client.GetAddressInitialFtp(_appSettings.FtpServer, _appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
                 _appSettings.InitialAddressDataProcessedPath,
@@ -138,7 +138,7 @@ namespace Datafordelen.Address
 
                             if (jsonText.Count >= 100000)
                             {
-                                _logger.LogInformation("This is the listname" + listName);
+                                _logger.LogInformation("This is the listname " + listName);
                                 ProcessDataForKafka(listName, jsonText, minX, minY, maxX, maxY);
                             }
                         }
@@ -174,8 +174,6 @@ namespace Datafordelen.Address
             }
             else if (listName.Equals("HusnummerList"))
             {
-                _logger.LogInformation("It got here");
-
                 foreach (var ob in documents)
                 {
                     hussnummerBatch.Add(ob);
@@ -207,26 +205,21 @@ namespace Datafordelen.Address
             }
             else if (listName.Equals("NavngivenVejList"))
             {
-                foreach(var doc in documents)
-                {
-                    if (doc["id_lokalId"].ToString() == "027d1b03-02e6-4dd4-8cdb-240cd4f2a3e3")
-                    {
-                    _logger.LogInformation(doc.ToString());
-                    }
-                }
                 var boundingBatch = newfilterAdressPosition(documents, minX, minY, maxX, maxY);
                 var noDuplicatesNavngivenVej = checkLatestDataDuplicates(boundingBatch);
 
+                foreach (var d in noDuplicatesNavngivenVej)
+                {
+                    _logger.LogInformation(@$"This is the navngivenj id {d["id_lokalId"]}, registrationFrom {d["registrationFrom"]}, registrationTo {d["registrationTo"]}, effectFrom {d["effectFrom"]}, effectTo {d["effectTo"]} ");
+
+                }
+
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicatesNavngivenVej);
                 _logger.LogInformation(@$"Wrote Navnigivenvej  {boundingBatch.Count}   objects into  {_appSettings.AdressTopicName}");
-                // foreach (var doc in noDuplicatesNavngivenVej)
-                // {
-                //     if (doc["id_lokalId"].ToString() == "027d1b03-02e6-4dd4-8cdb-240cd4f2a3e3")
-                //     {
-                //         _logger.LogInformation(doc.ToString());
-                //     }
-                //     NavngivenVejNew.Add(doc);
-                // }
+                foreach (var doc in noDuplicatesNavngivenVej)
+                {
+                    NavngivenVejNew.Add(doc);
+                }
 
 
                 noDuplicatesNavngivenVej.Clear();
@@ -238,15 +231,14 @@ namespace Datafordelen.Address
             else if (listName.Equals("NavngivenVejKommunedelList"))
             {
                 var noDuplicates = checkLatestDataDuplicates(documents);
+
                 _kafkaProducer.Produce(_appSettings.AdressTopicName, noDuplicates);
                 _logger.LogInformation(@$"Wrote  {documents.Count}   objects into  {_appSettings.AdressTopicName}");
                 documents.Clear();
 
                 //Trick used to add the roadname into the house objects as NavngivenVejList is after HussnumerList we need all the data from both lists in order to make the dictionary lookup 
-                //HussnumerNavngivej = AddRoadNameToHouseObjects(NavngivenVejNew, HussnumerNew);
-                NavngivenVejNew.Clear();
-                HussnumerNew.Clear();
-                //_kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
+                HussnumerNavngivej = AddRoadNameToHouseObjects(NavngivenVejNew, HussnumerNew);
+                _kafkaProducer.Produce(_appSettings.AdressTopicName, HussnumerNavngivej);
                 _logger.LogInformation(@$"Wrote newHussnumer  {HussnumerNavngivej.Count}   objects into  {_appSettings.AdressTopicName}");
             }
             else
@@ -286,8 +278,14 @@ namespace Datafordelen.Address
         private List<JObject> AddRoadNameToHouseObjects(List<JObject> roadNameItems, List<JObject> HussnummerItems)
         {
             var newHussnummerItems = new List<JObject>();
+            //Extra check for duplicates
+            roadNameItems = checkLatestDataDuplicates(roadNameItems);
+
 
             _logger.LogInformation("The number of husnnumer items " + HussnummerItems.Count());
+            _logger.LogInformation("The number of roadname items " + roadNameItems.Count());
+
+
 
             var roadNameLookup = roadNameItems.Select(x => new KeyValuePair<string, JObject>(x["id_lokalId"].ToString(), x)).ToDictionary(x => x.Key, x => x.Value);
 
@@ -303,6 +301,8 @@ namespace Datafordelen.Address
                     newHussnummerItems.Add(house);
                 }
             }
+
+            _logger.LogInformation("The number of new hussnumer items " + newHussnummerItems.Count());
 
             return newHussnummerItems;
         }
@@ -331,18 +331,19 @@ namespace Datafordelen.Address
             {
                 foreach (var jp in document.Properties().ToList())
                 {
-                    if (jp.Name == "position")
+                    try
                     {
-                        point = rdr.Read(jp.Value.ToString());
-                        if (boundingBox.Intersects(point.EnvelopeInternal))
+                        if (jp.Name == "position")
                         {
-                            filteredBatch.Add(document);
+                            point = rdr.Read(jp.Value.ToString());
+                            if (boundingBox.Intersects(point.EnvelopeInternal))
+                            {
+                                filteredBatch.Add(document);
+                            }
                         }
-                    }
-                    else if (jp.Name == "roadRegistrationRoadLine")
-                    {
-                        try
+                        else if (jp.Name == "roadRegistrationRoadLine")
                         {
+
                             if (jp.Value != null)
                             {
                                 line = rdr.Read(jp.Value.ToString());
@@ -377,15 +378,17 @@ namespace Datafordelen.Address
                             }
                         }
 
-                        /* Gets parse exception when they are values in both roadRegistrationRoadConnectionPoints and roadRegistrationArea,
-                           also when they are null values in those fields
-                        */
-                        catch (NetTopologySuite.IO.ParseException e)
-                        {
-                            _logger.LogError("Error writing data: {0}.", e.GetType().Name);
-                            _logger.LogInformation(document.ToString());
-                            break;
-                        }
+
+
+                    }
+                    /* Gets parse exception when they are values in both roadRegistrationRoadConnectionPoints and roadRegistrationArea,
+                          also when they are null values in those fields
+                       */
+                    catch (NetTopologySuite.IO.ParseException e)
+                    {
+                        _logger.LogError("Error writing data: {0}.", e.GetType().Name);
+                        _logger.LogInformation(document.ToString());
+                        break;
                     }
                 }
             }
