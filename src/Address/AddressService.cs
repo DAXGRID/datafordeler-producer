@@ -37,8 +37,8 @@ namespace Datafordelen.Address
 
         public async Task GetinitialAddressData()
         {
-            //_client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath, _appSettings.InitialAddressDataUnzipPath);
-            await _client.GetAddressInitialFtp(_appSettings.FtpServer, _appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
+            _client.GetAddressInitialLoad(_appSettings.InitialAddressDataUrl, _appSettings.InitialAddressDataZipFilePath, _appSettings.InitialAddressDataUnzipPath);
+            //await _client.GetAddressInitialFtp(_appSettings.FtpServer, _appSettings.InitialAddressDataUnzipPath, _appSettings.InitialAddressDataUnzipPath);
             await ProcessLatestAdresses(
                 _appSettings.InitialAddressDataUnzipPath,
                 _appSettings.InitialAddressDataProcessedPath,

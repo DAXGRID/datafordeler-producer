@@ -31,8 +31,8 @@ namespace Datafordelen.GeoData
 
         public async Task GetLatestGeoData()
         {
-            await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.GeoUserName, _appSettings.GeoPassword, _appSettings.GeoUnzipPath, _appSettings.GeoGmlPath);
-            convertToGeojson(_appSettings.GeoFieldList, _appSettings.ConvertScriptFileName);
+            //await _client.GetFileFtp(_appSettings.FtpServer, _appSettings.GeoUserName, _appSettings.GeoPassword, _appSettings.GeoUnzipPath, _appSettings.GeoGmlPath);
+            //convertToGeojson(_appSettings.GeoFieldList, _appSettings.ConvertScriptFileName);
             ProcessGeoDirectory(_appSettings.GeoUnzipPath,
              _appSettings.GeoProcessedPath,
              _appSettings.GeoFieldList,
@@ -44,6 +44,9 @@ namespace Datafordelen.GeoData
 
         private void ProcessGeoDirectory(string sourceDirectory, string destinationDirectory, string geoFilter, double minX, double minY, double maxX, double maxY)
         {
+            var destinfo = new DirectoryInfo(destinationDirectory);
+            Directory.CreateDirectory(destinationDirectory);
+
             var fileEntries = Directory.GetFiles(sourceDirectory).ToList();
             var filtered = new List<String>();
             var filterList = geoFilter.Split(",").ToList();
@@ -88,7 +91,7 @@ namespace Datafordelen.GeoData
 
         private void filterGeoPosition(String fileName, double minX, double maxX, double minY, double maxY)
         {
-            JObject jsonDoc ;
+            JObject jsonDoc;
             var batch = new List<JObject>();
             var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
             var feature = new NetTopologySuite.Features.Feature();
@@ -123,7 +126,7 @@ namespace Datafordelen.GeoData
                                             var atr = feature.Attributes;
                                             if (boundingBox.Intersects(geo.EnvelopeInternal))
                                             {
-                                                jsonDoc = createGeoObject(atr,geo,typeName);
+                                                jsonDoc = createGeoObject(atr, geo, typeName);
                                                 batch.Add(jsonDoc);
                                                 if (batch.Count >= 5000)
                                                 {
@@ -139,8 +142,8 @@ namespace Datafordelen.GeoData
                                             _logger.LogError("Error writing data: {0}.", e.GetType().Name);
                                             var geo = feature.Geometry;
                                             var atr = feature.Attributes;
-                                            
-                                            jsonDoc = createGeoObject(atr,geo,typeName);
+
+                                            jsonDoc = createGeoObject(atr, geo, typeName);
                                             batch.Add(jsonDoc);
                                             _producer.Produce(_appSettings.GeoDataTopicName, batch);
                                             _logger.LogInformation("Wrote " + batch.Count + " objects into " + _appSettings.GeoDataTopicName);
@@ -165,14 +168,47 @@ namespace Datafordelen.GeoData
 
         private JObject createGeoObject(NetTopologySuite.Features.IAttributesTable atr, NetTopologySuite.Geometries.Geometry geo, string geoType)
         {
-            var jsonObj = new
+            string jsonDoc = "";
+            if (geoType == "vejmidte")
             {
-                gml_id = atr.GetOptionalValue("gml_id"),
-                id_lokalId = atr.GetOptionalValue("id_lokalid"),
-                geo = geo.ToString(),
-                type = geoType
-            };
-            var geoObject = JObject.Parse(jsonObj.ToString());
+                var jsonObj = new
+                {
+                    gml_id = atr.GetOptionalValue("gml_id"),
+                    id_lokalId = atr.GetOptionalValue("id_lokalid"),
+                    roadCategory = atr.GetOptionalValue("vejkategori"),
+                    trafficType = atr.GetOptionalValue("trafikart"),
+                    geo = geo.ToString(),
+                    type = geoType
+                };
+                jsonDoc = JsonConvert.SerializeObject(jsonObj);
+            }
+            else if (geoType == "bebyggelse")
+            {
+                var jsonObj = new
+                {
+                    gml_id = atr.GetOptionalValue("gml_id"),
+                    id_lokalId = atr.GetOptionalValue("id_lokalid"),
+                    areaType = atr.GetOptionalValue("bebyggelsestype"),
+                    name = atr.GetOptionalValue("navn_1_skrivemaade"),
+                    geo = geo.ToString(),
+                    type = geoType
+                };
+                jsonDoc = JsonConvert.SerializeObject(jsonObj);
+            }
+            else
+            {
+                var jsonObj = new
+                {
+                    gml_id = atr.GetOptionalValue("gml_id"),
+                    id_lokalId = atr.GetOptionalValue("id_lokalid"),
+                    geo = geo.ToString(),
+                    type = geoType
+                };
+                jsonDoc = JsonConvert.SerializeObject(jsonObj);
+            }
+
+            //_logger.LogInformation(jsonDoc);
+            var geoObject = JObject.Parse(jsonDoc);
             return geoObject;
         }
     }

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build-env
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1  AS build-env
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
@@ -7,6 +7,15 @@ RUN dotnet restore
 
 #Copy the convert script
 COPY ./src/convert_script.sh ./out/datafordeleren/
+
+# copy geodata files
+COPY ./src/geodanmark_60_nohist.bygning.json ./out/datafordeleren/
+COPY ./src/geodanmark_60_nohist.hegn.json ./out/datafordeleren
+COPY ./src/geodanmark_60_nohist.jernbane.json ./out/datafordeleren/
+COPY ./src/geodanmark_60_nohist.soe.json ./out/datafordeleren/
+COPY ./src/geodanmark_60_nohist.vejkant.json ./out/datafordeleren/
+COPY ./src/geodanmark_60_nohist.vejmidte.json ./out/datafordeleren/
+COPY ./src/bebyggelse.json ./out/datafordeleren/
 
 # Copy everything else and build
 COPY . ./
