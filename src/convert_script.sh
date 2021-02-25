@@ -1,5 +1,5 @@
 #!/bin/bash
-FILES=datafordeleren/geo/geogml/*.shp
+FILES=datafordeleren/geo/geogml/*.gml
 for f in $FILES
 do
   file=`basename "$f"`
