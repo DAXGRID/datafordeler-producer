@@ -114,13 +114,13 @@ namespace Datafordelen.BBR
 
                             if (jsonText.Count >= 100000)
                             {
-                                processBBRDataToKakfa(listName,jsonText,minX,minY,maxX,maxY);
+                                processBBRDataToKakfa(listName, jsonText, minX, minY, maxX, maxY);
                             }
 
                         }
 
                     }
-                    processBBRDataToKakfa(listName,jsonText,minX,minY,maxX,maxY);
+                    processBBRDataToKakfa(listName, jsonText, minX, minY, maxX, maxY);
                 }
             }
         }
@@ -184,40 +184,49 @@ namespace Datafordelen.BBR
             Geometry point;
             var rdr = new WKTReader(geometryFactory);
             var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
-
-            foreach (var document in batch)
+            //Check if bounding box was provided, if there are no values present then return original batch
+            if (minX == 0)
             {
-                try
+                return batch;
+            }
+            else
+            {
+
+
+                foreach (var document in batch)
                 {
-                    foreach (var jp in document.Properties().ToList())
+                    try
                     {
-                        if (jp.Name == "byg404Koordinat")
+                        foreach (var jp in document.Properties().ToList())
                         {
-                            point = rdr.Read(jp.Value.ToString());
-                            if (boundingBox.Intersects(point.EnvelopeInternal))
+                            if (jp.Name == "byg404Koordinat")
                             {
-                                filteredBatch.Add(document);
+                                point = rdr.Read(jp.Value.ToString());
+                                if (boundingBox.Intersects(point.EnvelopeInternal))
+                                {
+                                    filteredBatch.Add(document);
+                                }
                             }
-                        }
-                        else if (jp.Name == "tek109Koordinat")
-                        {
-                            point = rdr.Read(jp.Value.ToString());
-                            if (boundingBox.Intersects(point.EnvelopeInternal))
+                            else if (jp.Name == "tek109Koordinat")
                             {
-                                filteredBatch.Add(document);
+                                point = rdr.Read(jp.Value.ToString());
+                                if (boundingBox.Intersects(point.EnvelopeInternal))
+                                {
+                                    filteredBatch.Add(document);
+                                }
                             }
                         }
                     }
+                    catch (NetTopologySuite.IO.ParseException e)
+                    {
+                        _logger.LogError("Error writing data: {0}.", e.GetType().Name);
+                        _logger.LogInformation(document.ToString());
+                        break;
+                    }
                 }
-                catch (NetTopologySuite.IO.ParseException e)
-                {
-                    _logger.LogError("Error writing data: {0}.", e.GetType().Name);
-                    _logger.LogInformation(document.ToString());
-                    break;
-                }
-            }
 
-            return filteredBatch;
+                return filteredBatch;
+            }
         }
 
         private JObject TranslateTimeFields(JObject jo)

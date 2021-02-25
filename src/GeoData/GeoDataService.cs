@@ -95,12 +95,21 @@ namespace Datafordelen.GeoData
             var batch = new List<JObject>();
             var boundingBox = new NetTopologySuite.Geometries.Envelope(minX, maxX, minY, maxY);
             var feature = new NetTopologySuite.Features.Feature();
+            var typeName = "";
 
             using (FileStream s = File.Open(fileName, FileMode.Open))
             using (var streamReader = new StreamReader(s))
             {
                 var file = Path.GetFileNameWithoutExtension(fileName).Split(".");
-                var typeName = file[1];
+                if (fileName.Contains("bebyggelse"))
+                {
+                    typeName = file[0];
+                }
+                else
+                {
+                    typeName = file[1];
+                }
+
 
                 using (var jsonreader = new Newtonsoft.Json.JsonTextReader(streamReader))
                 {
@@ -124,7 +133,8 @@ namespace Datafordelen.GeoData
 
                                             var geo = feature.Geometry;
                                             var atr = feature.Attributes;
-                                            if (boundingBox.Intersects(geo.EnvelopeInternal))
+                                             //Check if bounding box was provided, if there are no values provided you add all the objects 
+                                            if (minX == 0)
                                             {
                                                 jsonDoc = createGeoObject(atr, geo, typeName);
                                                 batch.Add(jsonDoc);
@@ -133,6 +143,20 @@ namespace Datafordelen.GeoData
                                                     _producer.Produce(_appSettings.GeoDataTopicName, batch);
                                                     _logger.LogInformation("Wrote " + batch.Count + " objects into " + _appSettings.GeoDataTopicName);
                                                     batch.Clear();
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (boundingBox.Intersects(geo.EnvelopeInternal))
+                                                {
+                                                    jsonDoc = createGeoObject(atr, geo, typeName);
+                                                    batch.Add(jsonDoc);
+                                                    if (batch.Count >= 5000)
+                                                    {
+                                                        _producer.Produce(_appSettings.GeoDataTopicName, batch);
+                                                        _logger.LogInformation("Wrote " + batch.Count + " objects into " + _appSettings.GeoDataTopicName);
+                                                        batch.Clear();
+                                                    }
                                                 }
                                             }
                                         }
@@ -190,6 +214,20 @@ namespace Datafordelen.GeoData
                     id_lokalId = atr.GetOptionalValue("id_lokalid"),
                     areaType = atr.GetOptionalValue("bebyggelsestype"),
                     name = atr.GetOptionalValue("navn_1_skrivemaade"),
+                    population = atr.GetOptionalValue("indbyggertal"),
+                    geo = geo.ToString(),
+                    type = geoType
+                };
+                jsonDoc = JsonConvert.SerializeObject(jsonObj);
+            }
+            else if (geoType == "soe")
+            {
+                var jsonObj = new
+                {
+                    gml_id = atr.GetOptionalValue("gml_id"),
+                    id_lokalId = atr.GetOptionalValue("id_lokalid"),
+                    lakeType = atr.GetOptionalValue("soetype"),
+                    minimumSize = atr.GetOptionalValue("underminimumsoe"),
                     geo = geo.ToString(),
                     type = geoType
                 };

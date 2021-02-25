@@ -8,6 +8,7 @@ namespace Datafordelen
     {
         public static async Task Main(string[] args)
         {
+
             using var serviceProvider = Setup.Configure();
             var startup = serviceProvider.GetService<Startup>();
             await startup.StartAsync();
